@@ -6,9 +6,9 @@ import Link from "next/link";
 import { Toaster, toast } from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../../../lib/supabase";
 import { useRouter } from "next/navigation";
-import ThemeToggle from "@/components/ThemeToggle";
+import ThemeToggle from "../../../components/ThemeToggle";
 
 interface FormData {
   fullName: string;
@@ -23,6 +23,55 @@ interface FormData {
   password: string;
   acceptedTerms: boolean;
 }
+
+const createProfiles = async (
+  supabase: any,
+  userData: {
+    userId: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    address: string | null;
+    dateOfBirth: string | null;
+    gender: string | null;
+    nationality: string;
+    rightToWork: boolean;
+  },
+  maxAttempts = 3
+): Promise<void> => {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const { error } = await supabase.rpc("create_candidate_profiles", {
+      p_user_id: userData.userId,
+      p_full_name: userData.fullName,
+      p_email: userData.email,
+      p_phone_number: userData.phoneNumber,
+      p_address: userData.address,
+      p_date_of_birth: userData.dateOfBirth,
+      p_gender: userData.gender,
+      p_nationality: userData.nationality,
+      p_right_to_work: userData.rightToWork,
+    });
+
+    if (!error) return;
+
+    if (
+      error.message.includes("User does not exist in auth.users") ||
+      error.message.includes("violates foreign key constraint")
+    ) {
+      if (attempt === maxAttempts) {
+        throw new Error(
+          "Account creation is taking longer than expected. Please try signing in after a few minutes."
+        );
+      }
+      // Wait longer between each attempt
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      continue;
+    }
+
+    // If it's not a user existence error, throw immediately
+    throw error;
+  }
+};
 
 export default function CandidateSignUp() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -149,32 +198,21 @@ export default function CandidateSignUp() {
           return;
         }
 
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from("user_profiles")
-          .insert({
-            id: authData.user.id,
-            user_type: "candidate",
-          });
+        // Initial wait for auth user creation
+        await new Promise((resolve) => setTimeout(resolve, 3000));
 
-        if (profileError) throw profileError;
-
-        // Create candidate profile
-        const { error: candidateError } = await supabase
-          .from("candidate_profiles")
-          .insert({
-            id: authData.user.id,
-            full_name: formData.fullName,
-            email: formData.email.toLowerCase(), // Convert to lowercase
-            phone_number: formData.phoneNumber,
-            address: formData.address || null,
-            date_of_birth: formData.dateOfBirth || null,
-            gender: formData.gender || null,
-            nationality: formData.nationality,
-            right_to_work: formData.rightToWork === "yes",
-          });
-
-        if (candidateError) throw candidateError;
+        // Attempt to create profiles with retries
+        await createProfiles(supabase, {
+          userId: authData.user.id,
+          fullName: formData.fullName,
+          email: formData.email.toLowerCase(),
+          phoneNumber: formData.phoneNumber,
+          address: formData.address || null,
+          dateOfBirth: formData.dateOfBirth || null,
+          gender: formData.gender || null,
+          nationality: formData.nationality,
+          rightToWork: formData.rightToWork === "yes",
+        });
 
         toast.success(
           "Registration successful! Please check your email to verify your account."

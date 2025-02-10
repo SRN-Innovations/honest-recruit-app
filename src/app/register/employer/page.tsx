@@ -6,9 +6,9 @@ import Link from "next/link";
 import { Toaster, toast } from "react-hot-toast";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../../../lib/supabase";
 import { useRouter } from "next/navigation";
-import ThemeToggle from "@/components/ThemeToggle";
+import ThemeToggle from "../../../components/ThemeToggle";
 
 interface SubUser {
   name: string;

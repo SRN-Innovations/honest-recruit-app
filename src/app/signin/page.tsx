@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { toast, Toaster } from "react-hot-toast";
 
 export default function SignIn() {
@@ -29,27 +29,35 @@ export default function SignIn() {
         return;
       }
 
-      if (data.user) {
-        // Check user type from profiles table
-        const { data: profileData, error: profileError } = await supabase
-          .from("user_profiles")
-          .select("user_type")
-          .eq("user_id", data.user.id)
-          .single();
+      if (!data.user) {
+        toast.error("Failed to sign in");
+        return;
+      }
 
-        if (profileError) {
-          toast.error("Error fetching user profile");
-          return;
-        }
+      // Check user type from profiles table - using 'id' instead of 'user_id'
+      const { data: profileData, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("user_type")
+        .eq("id", data.user.id) // Changed from user_id to id
+        .single();
 
-        // Redirect based on user type
-        if (profileData.user_type === "employer") {
-          router.push("/dashboard");
-        } else {
-          router.push("/candidate/dashboard");
-        }
+      if (profileError) {
+        console.error("Profile error:", profileError);
+        toast.error("Error fetching user profile");
+        return;
+      }
+
+      // Redirect based on user type
+      if (profileData?.user_type === "employer") {
+        router.push("/dashboard");
+      } else if (profileData?.user_type === "candidate") {
+        router.push("/candidate/dashboard");
+      } else {
+        console.error("Invalid user type:", profileData);
+        toast.error("Invalid user type");
       }
     } catch (error) {
+      console.error("Sign in error:", error);
       toast.error("An unexpected error occurred");
     } finally {
       setIsLoading(false);
@@ -135,6 +143,19 @@ export default function SignIn() {
                 placeholder="Enter your password"
                 required
               />
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <div className="flex items-center">
+                {/* You can add "Remember me" checkbox here if needed */}
+              </div>
+              <div className="text-sm">
+                <Link
+                  href="/reset-password"
+                  className="text-[#00A3FF] hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
             </div>
             <button
               onClick={handleSignIn}
