@@ -49,7 +49,7 @@ export default function SignIn() {
 
       // Redirect based on user type
       if (profileData?.user_type === "employer") {
-        router.push("/dashboard");
+        router.push("/employer/dashboard");
       } else if (profileData?.user_type === "candidate") {
         router.push("/candidate/dashboard");
       } else {

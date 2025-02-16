@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import ThemeToggle from "../../components/ThemeToggle";
+import ThemeToggle from "../../../components/ThemeToggle";
 import { useRouter } from "next/navigation";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../../../lib/supabase";
 
 export default function DashboardLayout({
   children,
@@ -81,7 +81,7 @@ export default function DashboardLayout({
           <ul className="space-y-2">
             <li>
               <Link
-                href="/dashboard"
+                href="/employer/dashboard"
                 className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <svg
@@ -127,7 +127,7 @@ export default function DashboardLayout({
             {/* Post a Role */}
             <li>
               <Link
-                href="/dashboard/jobs/post"
+                href="/employer/dashboard/jobs/post"
                 className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <svg
@@ -150,7 +150,7 @@ export default function DashboardLayout({
             {/* Posted Jobs */}
             <li>
               <Link
-                href="/dashboard/jobs"
+                href="/employer/dashboard/jobs"
                 className="flex items-center gap-3 p-3 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 <svg

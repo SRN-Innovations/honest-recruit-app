@@ -13,6 +13,7 @@
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@supabase/supabase-js": "^2.48.1",
     "@types/react-calendar": "^4.1.0",
+    "date-fns": "^4.1.0",
     "next": "15.1.6",
     "react": "^19.0.0",
     "react-calendar": "^5.1.0",

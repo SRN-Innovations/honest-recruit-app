@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import CustomCalendar from "../../components/Calendar";
+import CustomCalendar from "../../../components/Calendar";
 
 interface Applicant {
   id: string;
