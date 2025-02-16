@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import JobDetailsForm from "@/components/jobs/JobDetailsForm";
-import RecruitmentProcessForm from "@/components/jobs/RecruitmentProcessForm";
 import CompensationForm from "@/components/jobs/CompensationForm";
+import JobDetailsForm from "@/components/jobs/JobDetailsForm";
 import LegalForm from "@/components/jobs/LegalForm";
-import { toast } from "react-hot-toast";
 import PerksForm from "@/components/jobs/PerksForm";
+import RecruitmentProcessForm from "@/components/jobs/RecruitmentProcessForm";
+import { supabase } from "@/lib/supabase";
+import { toast } from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export interface JobPosting {
   jobDetails: {
@@ -17,6 +17,7 @@ export interface JobPosting {
     numberOfPositions: number;
     roleType: string;
     skills: string[];
+    optionalSkills: string[];
     startRequired: string;
     employmentType: string;
     salary: {
@@ -90,6 +91,7 @@ export default function PostJob() {
       numberOfPositions: 1,
       roleType: "",
       skills: [],
+      optionalSkills: [],
       startRequired: "",
       employmentType: "",
       salary: { type: "exact" },
