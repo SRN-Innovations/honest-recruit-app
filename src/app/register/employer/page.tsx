@@ -9,6 +9,8 @@ import { faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { supabase } from "../../../lib/supabase";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "../../../components/ThemeToggle";
+import MainHeader from "@/components/layout/MainHeader";
+import MainFooter from "@/components/layout/MainFooter";
 
 interface SubUser {
   name: string;
@@ -298,7 +300,8 @@ export default function EmployerSignUp() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col">
+      <MainHeader showSignIn={false} />
       <Toaster
         position="top-right"
         toastOptions={{
@@ -325,49 +328,11 @@ export default function EmployerSignUp() {
           },
         }}
       />
-      {/* Navigation */}
-      <nav className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <Link href="/" className="flex items-center gap-3">
-              <Image
-                src="/logo.png"
-                alt="Honest Recruit Logo"
-                width={45}
-                height={45}
-                className="object-contain"
-              />
-              <div className="flex flex-col">
-                <span className="text-xl font-bold text-[#00A3FF]">
-                  HONEST RECRUIT
-                </span>
-                <span className="text-xs text-gray-600 dark:text-gray-300 -mt-1">
-                  INTEGRITY IN EVERY HIRE
-                </span>
-              </div>
-            </Link>
-
-            {/* Add Menu Items */}
-            <div className="hidden sm:flex sm:items-center sm:space-x-4">
-              <Link href="/about" className="nav-link dark:text-white">
-                About
-              </Link>
-              <Link href="/contact" className="nav-link dark:text-white">
-                Contact
-              </Link>
-              <ThemeToggle />
-              <Link href="/signin" className="btn-primary">
-                Sign In
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
 
       {/* Main Content */}
-      <main className="flex-grow py-12">
-        {/* Progress Steps */}
-        <div className="max-w-4xl mx-auto pt-8 px-4 sm:px-6 lg:px-8">
+      <main className="flex-grow pt-24 mb-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Progress Steps */}
           <div className="flex justify-between mb-8">
             {steps.map((step, index) => (
               <div key={step} className="flex flex-col items-center w-full">
@@ -406,7 +371,7 @@ export default function EmployerSignUp() {
           </div>
 
           {/* Form */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-8">
+          <div className="mt-8 bg-white dark:bg-gray-800 p-8 rounded-lg shadow">
             {currentStep === 1 && (
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -1055,161 +1020,7 @@ export default function EmployerSignUp() {
         </div>
       </main>
 
-      {/* Footer - Updated to match landing page */}
-      <footer className="bg-white dark:bg-gray-800 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Company Info */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Image
-                  src="/logo.png"
-                  alt="Honest Recruit Logo"
-                  width={32}
-                  height={32}
-                  className="object-contain"
-                />
-                <span className="text-lg font-bold text-[#00A3FF]">
-                  HONEST RECRUIT
-                </span>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Transforming recruitment through integrity and innovation.
-              </p>
-            </div>
-
-            {/* For Job Seekers */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                For Job Seekers
-              </h3>
-              <ul className="space-y-3">
-                <li>
-                  <Link
-                    href="/jobs"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Browse Jobs
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/career-advice"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Career Advice
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/resume-tips"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Resume Tips
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/salary-guide"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Salary Guide
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* For Employers */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                For Employers
-              </h3>
-              <ul className="space-y-3">
-                <li>
-                  <Link
-                    href="/post-job"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Post a Job
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/talent-search"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Talent Search
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/pricing"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Pricing
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/recruitment-solutions"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Recruitment Solutions
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Company */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                Company
-              </h3>
-              <ul className="space-y-3">
-                <li>
-                  <Link
-                    href="/about"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    About Us
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/contact"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Contact
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/privacy"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Privacy Policy
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/terms"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Terms of Service
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom Bar */}
-          <div className="border-t border-gray-200 dark:border-gray-700 mt-8 pt-8">
-            <p className="text-sm text-gray-400 text-center">
-              © {new Date().getFullYear()} Honest Recruit. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <MainFooter />
     </div>
   );
 }

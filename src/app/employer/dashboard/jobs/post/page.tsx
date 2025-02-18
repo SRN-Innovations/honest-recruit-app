@@ -8,7 +8,7 @@ import RecruitmentProcessForm from "@/components/jobs/RecruitmentProcessForm";
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export interface JobPosting {
   jobDetails: {
@@ -80,6 +80,12 @@ export interface JobPosting {
   };
 }
 
+interface Props {
+  data: JobPosting["jobDetails"];
+  onChange: (data: JobPosting["jobDetails"]) => void;
+  errors?: Record<string, string[]>;
+}
+
 export default function PostJob() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
@@ -139,6 +145,7 @@ export default function PostJob() {
   });
 
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const formRef = useRef<HTMLDivElement>(null);
 
   const validateStep = (step: number) => {
     const newErrors: Record<string, string[]> = {};
@@ -146,13 +153,13 @@ export default function PostJob() {
     switch (step) {
       case 1:
         if (!jobPosting.jobDetails.title) {
-          newErrors.title = ["Role title is required"];
+          newErrors.title = ["Required"];
         }
         if (!jobPosting.jobDetails.description) {
-          newErrors.description = ["Role description is required"];
+          newErrors.description = ["Required"];
         }
         if (!jobPosting.jobDetails.roleType) {
-          newErrors.roleType = ["Role type is required"];
+          newErrors.roleType = ["Required"];
         }
         break;
       case 2:
@@ -168,6 +175,7 @@ export default function PostJob() {
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
+      formRef.current?.scrollIntoView({ behavior: "smooth" });
       const errorMessages = Object.values(newErrors).flat();
       toast.error(
         <div>
@@ -287,6 +295,7 @@ export default function PostJob() {
             onChange={(details) =>
               setJobPosting({ ...jobPosting, jobDetails: details })
             }
+            errors={errors}
           />
         );
       case 2:
@@ -343,7 +352,10 @@ export default function PostJob() {
         Post a New Job
       </h1>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div
+        ref={formRef}
+        className="bg-white dark:bg-gray-800 rounded-lg shadow p-6"
+      >
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             {[1, 2, 3, 4, 5].map((step) => (

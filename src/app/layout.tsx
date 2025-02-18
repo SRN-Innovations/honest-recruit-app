@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Honest Recruit",
+  title: "Honest Recruitment",
   description:
     "A modern recruitment platform for connecting talent with opportunities",
   icons: {

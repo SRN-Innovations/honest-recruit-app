@@ -6,6 +6,8 @@ import Image from "next/image";
 import ThemeToggle from "../../../components/ThemeToggle";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
+import MainHeader from "@/components/layout/MainHeader";
+import MainFooter from "@/components/layout/MainFooter";
 
 export default function DashboardLayout({
   children,
@@ -24,52 +26,13 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-sm z-50">
-        <div className="flex justify-between items-center px-4 py-3">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <svg
-                className="w-6 h-6 text-gray-600 dark:text-gray-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-            <div className="flex items-center gap-3">
-              <Image
-                src="/logo.png"
-                alt="Honest Recruit Logo"
-                width={40}
-                height={40}
-                className="object-contain"
-              />
-              <span className="text-xl font-bold text-[#00A3FF]">
-                HONEST RECRUIT
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <button
-              onClick={handleSignOut}
-              className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
+      <MainHeader
+        showSignIn={false}
+        showThemeToggle={true}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        showSignOut={true}
+      />
 
       {/* Sidebar */}
       <aside
@@ -251,125 +214,7 @@ export default function DashboardLayout({
         {children}
       </main>
 
-      {/* Footer */}
-      <footer
-        className={`bg-white dark:bg-gray-800 mt-auto ${
-          isSidebarOpen ? "ml-64" : "ml-0"
-        } transition-margin duration-300`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* Company Info */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Image
-                  src="/logo.png"
-                  alt="Honest Recruit Logo"
-                  width={32}
-                  height={32}
-                  className="object-contain"
-                />
-                <span className="text-lg font-bold text-[#00A3FF]">
-                  HONEST RECRUIT
-                </span>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Transforming recruitment through integrity and innovation.
-              </p>
-            </div>
-
-            {/* Quick Links */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                Quick Links
-              </h3>
-              <ul className="space-y-3">
-                <li>
-                  <Link
-                    href="/dashboard/jobs"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Jobs
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/dashboard/candidates"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Candidates
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/dashboard/settings"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Settings
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Support */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                Support
-              </h3>
-              <ul className="space-y-3">
-                <li>
-                  <Link
-                    href="/help"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Help Center
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/contact"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Contact Us
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            {/* Legal */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-                Legal
-              </h3>
-              <ul className="space-y-3">
-                <li>
-                  <Link
-                    href="/privacy"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Privacy Policy
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/terms"
-                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                  >
-                    Terms of Service
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom Bar */}
-          <div className="border-t border-gray-200 dark:border-gray-700 mt-8 pt-8">
-            <p className="text-sm text-gray-400 text-center">
-              © {new Date().getFullYear()} Honest Recruit. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <MainFooter isSidebarOpen={isSidebarOpen} />
     </div>
   );
 }

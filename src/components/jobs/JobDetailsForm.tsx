@@ -9,6 +9,7 @@ import { toast } from "react-hot-toast";
 interface Props {
   data: JobPosting["jobDetails"];
   onChange: (data: JobPosting["jobDetails"]) => void;
+  errors?: Record<string, string[]>;
 }
 
 interface RoleType {
@@ -40,7 +41,55 @@ const employmentTypes = [
 
 const locationTypes = ["Remote", "Office", "Hybrid"];
 
-export default function JobDetailsForm({ data, onChange }: Props) {
+const workingHours = [
+  "Full-time",
+  "Part-time",
+  "Flexible",
+  "Shift work",
+  "Weekend",
+];
+
+const equipmentOptions = [
+  "Laptop",
+  "Desktop Computer",
+  "Phone",
+  "Headset",
+  "Monitor",
+];
+
+const noticePeriods = [
+  "1 week",
+  "2 weeks",
+  "1 month",
+  "2 months",
+  "3 months",
+  "Negotiable",
+];
+
+const languages = [
+  "English",
+  "Spanish",
+  "French",
+  "German",
+  "Mandarin",
+  "Japanese",
+];
+
+const salaryRanges = [
+  { min: 20000, max: 30000 },
+  { min: 30000, max: 40000 },
+  { min: 40000, max: 50000 },
+  { min: 50000, max: 60000 },
+  { min: 60000, max: 70000 },
+  { min: 70000, max: 80000 },
+  { min: 80000, max: 90000 },
+  { min: 90000, max: 100000 },
+  { min: 100000, max: 120000 },
+  { min: 120000, max: 150000 },
+  { min: 150000, max: 200000 },
+];
+
+export default function JobDetailsForm({ data, onChange, errors }: Props) {
   const [roleTypes, setRoleTypes] = useState<RoleType[]>([]);
   const [availableSkills, setAvailableSkills] = useState<Skill[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>(data.skills);
@@ -220,6 +269,51 @@ export default function JobDetailsForm({ data, onChange }: Props) {
     }
   };
 
+  const handleSalaryTypeChange = (type: "exact" | "range") => {
+    onChange({
+      ...data,
+      salary:
+        type === "exact"
+          ? { type: "exact", exact: data.salary.exact || 0 }
+          : {
+              type: "range",
+              min: data.salary.min || 0,
+              max: data.salary.max || 0,
+            },
+    });
+  };
+
+  const handleLanguageChange = (
+    language: string,
+    field: keyof Pick<
+      JobPosting["jobDetails"]["languages"][0],
+      "speak" | "read" | "write"
+    >
+  ) => {
+    const existingLang = data.languages.find((l) => l.language === language);
+    if (existingLang) {
+      onChange({
+        ...data,
+        languages: data.languages.map((l) =>
+          l.language === language ? { ...l, [field]: !l[field] } : l
+        ),
+      });
+    } else {
+      onChange({
+        ...data,
+        languages: [
+          ...data.languages,
+          {
+            language,
+            speak: field === "speak",
+            read: field === "read",
+            write: field === "write",
+          },
+        ],
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-48">
@@ -230,49 +324,30 @@ export default function JobDetailsForm({ data, onChange }: Props) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <label className="form-label">Role Title *</label>
-        <input
-          type="text"
-          value={data.title}
-          onChange={(e) => onChange({ ...data, title: e.target.value })}
-          className="form-input"
-          required
-        />
-      </div>
-
-      <div>
-        <label className="form-label">Role Description *</label>
-        <textarea
-          value={data.description}
-          onChange={(e) => onChange({ ...data, description: e.target.value })}
-          rows={4}
-          className="form-textarea"
-          required
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="form-label">Number of Positions *</label>
+          <label className="form-label">
+            Role Title <span className="text-red-500">*</span>
+          </label>
           <input
-            type="number"
-            min="1"
-            value={data.numberOfPositions}
-            onChange={(e) =>
-              onChange({ ...data, numberOfPositions: parseInt(e.target.value) })
-            }
-            className="form-input"
+            type="text"
+            value={data.title}
+            onChange={(e) => onChange({ ...data, title: e.target.value })}
+            className={`form-input ${errors?.title ? "border-red-500" : ""}`}
             required
           />
         </div>
 
         <div>
-          <label className="form-label">Role Type *</label>
+          <label className="form-label">
+            Role Type <span className="text-red-500">*</span>
+          </label>
           <select
             value={data.roleType}
             onChange={(e) => onChange({ ...data, roleType: e.target.value })}
-            className="form-select"
+            className={`form-select ${
+              errors?.roleType ? "border-red-500" : ""
+            }`}
             required
           >
             <option value="">Select Role Type</option>
@@ -285,37 +360,37 @@ export default function JobDetailsForm({ data, onChange }: Props) {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <label className="form-label">Start Date *</label>
-          <select
-            value={data.startRequired}
-            onChange={(e) =>
-              onChange({ ...data, startRequired: e.target.value })
-            }
-            className="form-select"
-            required
-          >
-            <option value="">Select Start Date</option>
-            {startOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div>
+        <label className="form-label">
+          Role Description <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          value={data.description}
+          onChange={(e) => onChange({ ...data, description: e.target.value })}
+          rows={4}
+          className={`form-textarea ${
+            errors?.description ? "border-red-500" : ""
+          }`}
+          required
+        />
+      </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label className="form-label">Employment Type *</label>
+          <label className="form-label">
+            Employment Type <span className="text-red-500">*</span>
+          </label>
           <select
             value={data.employmentType}
             onChange={(e) =>
               onChange({ ...data, employmentType: e.target.value })
             }
-            className="form-select"
+            className={`form-select ${
+              errors?.employmentType ? "border-red-500" : ""
+            }`}
             required
           >
-            <option value="">Select Employment Type</option>
+            <option value="">Select Type</option>
             {employmentTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
@@ -325,14 +400,18 @@ export default function JobDetailsForm({ data, onChange }: Props) {
         </div>
 
         <div>
-          <label className="form-label">Location Type *</label>
+          <label className="form-label">
+            Location <span className="text-red-500">*</span>
+          </label>
           <select
             value={data.location}
             onChange={(e) => onChange({ ...data, location: e.target.value })}
-            className="form-select"
+            className={`form-select ${
+              errors?.location ? "border-red-500" : ""
+            }`}
             required
           >
-            <option value="">Select Location Type</option>
+            <option value="">Select Location</option>
             {locationTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
@@ -340,6 +419,102 @@ export default function JobDetailsForm({ data, onChange }: Props) {
             ))}
           </select>
         </div>
+
+        <div>
+          <label className="form-label">
+            Working Hours <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={data.workingHours}
+            onChange={(e) =>
+              onChange({ ...data, workingHours: e.target.value })
+            }
+            className={`form-select ${
+              errors?.workingHours ? "border-red-500" : ""
+            }`}
+            required
+          >
+            <option value="">Select Hours</option>
+            {workingHours.map((hours) => (
+              <option key={hours} value={hours}>
+                {hours}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <label className="form-label">
+          Salary <span className="text-red-500">*</span>
+        </label>
+        <div className="flex gap-4 mb-2">
+          <label className="relative flex items-center">
+            <input
+              type="radio"
+              checked={data.salary.type === "exact"}
+              onChange={() => handleSalaryTypeChange("exact")}
+              className="peer sr-only"
+            />
+            <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 rounded-full peer-checked:border-blue-500 peer-checked:border-4"></div>
+            <span className="ml-2 text-gray-700 dark:text-gray-200">
+              Exact Amount
+            </span>
+          </label>
+          <label className="relative flex items-center">
+            <input
+              type="radio"
+              checked={data.salary.type === "range"}
+              onChange={() => handleSalaryTypeChange("range")}
+              className="peer sr-only"
+            />
+            <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 rounded-full peer-checked:border-blue-500 peer-checked:border-4"></div>
+            <span className="ml-2 text-gray-700 dark:text-gray-200">
+              Salary Range
+            </span>
+          </label>
+        </div>
+
+        {data.salary.type === "exact" ? (
+          <div>
+            <input
+              type="number"
+              value={data.salary.exact || ""}
+              onChange={(e) =>
+                onChange({
+                  ...data,
+                  salary: { type: "exact", exact: parseInt(e.target.value) },
+                })
+              }
+              className={`form-input ${errors?.salary ? "border-red-500" : ""}`}
+              placeholder="Enter salary amount"
+              min="0"
+            />
+          </div>
+        ) : (
+          <div>
+            <select
+              value={`${data.salary.min}-${data.salary.max}`}
+              onChange={(e) => {
+                const [min, max] = e.target.value.split("-").map(Number);
+                onChange({
+                  ...data,
+                  salary: { type: "range", min, max },
+                });
+              }}
+              className={`form-select ${
+                errors?.salary ? "border-red-500" : ""
+              }`}
+            >
+              <option value="">Select salary range</option>
+              {salaryRanges.map(({ min, max }) => (
+                <option key={`${min}-${max}`} value={`${min}-${max}`}>
+                  £{min.toLocaleString()} - £{max.toLocaleString()}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Skills Sections */}
