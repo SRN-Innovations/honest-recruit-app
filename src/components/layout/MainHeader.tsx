@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import ThemeToggle from "../ThemeToggle";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 
 interface MainHeaderProps {
   showSignIn?: boolean;
@@ -22,11 +22,12 @@ export default function MainHeader({
   showSignOut = false,
 }: MainHeaderProps) {
   const router = useRouter();
+  const { isLoggedIn, userType, signOut, redirectToDashboard } = useAuth();
 
-  const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-      router.push("/");
+  const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (isLoggedIn && userType) {
+      e.preventDefault();
+      redirectToDashboard();
     }
   };
 
@@ -55,7 +56,11 @@ export default function MainHeader({
                 </svg>
               </button>
             )}
-            <Link href="/" className="flex items-center gap-3">
+            <Link
+              href="/"
+              className="flex items-center gap-3"
+              onClick={handleHomeClick}
+            >
               <Image
                 src="/logo.png"
                 alt="Honest Recruit Logo"
@@ -74,7 +79,11 @@ export default function MainHeader({
             </Link>
           </div>
           <div className="hidden sm:flex sm:items-center sm:space-x-4">
-            <Link href="/" className="nav-link dark:text-white">
+            <Link
+              href="/"
+              className="nav-link dark:text-white"
+              onClick={handleHomeClick}
+            >
               Home
             </Link>
             <Link href="/about" className="nav-link dark:text-white">
@@ -84,14 +93,14 @@ export default function MainHeader({
               Contact
             </Link>
             {showThemeToggle && <ThemeToggle />}
-            {showSignIn && (
+            {showSignIn && !isLoggedIn && (
               <Link href="/signin" className="btn-primary">
                 Sign In
               </Link>
             )}
-            {showSignOut && (
+            {(showSignOut || isLoggedIn) && (
               <button
-                onClick={handleSignOut}
+                onClick={signOut}
                 className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
               >
                 Sign Out

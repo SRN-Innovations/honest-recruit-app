@@ -3,7 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 
-export default function MainFooter() {
+interface MainFooterProps {
+  isSidebarOpen?: boolean;
+}
+
+export default function MainFooter({ isSidebarOpen }: MainFooterProps) {
   return (
     <footer className="bg-white dark:bg-gray-800 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

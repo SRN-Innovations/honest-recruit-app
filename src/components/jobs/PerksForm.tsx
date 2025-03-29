@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { JobPosting } from "@/app/employer/dashboard/jobs/post/page";
+import { JobPosting } from "@/app/employer/jobs/post/page";
 
 interface Props {
   data: JobPosting["perks"];

@@ -1,10 +1,44 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
-import ThemeToggle from "../components/ThemeToggle";
 import MainFooter from "@/components/layout/MainFooter";
 import MainHeader from "@/components/layout/MainHeader";
+import { useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 export default function Home() {
+  const { isLoggedIn, isLoading, userType, redirectToDashboard } = useAuth();
+
+  useEffect(() => {
+    if (isLoggedIn && userType) {
+      redirectToDashboard();
+    }
+  }, [isLoggedIn, userType, redirectToDashboard]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00A3FF]"></div>
+      </div>
+    );
+  }
+
+  // If the user is logged in, we'll redirect them in the useEffect above,
+  // but we'll handle the case where redirect might be delayed
+  if (isLoggedIn) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00A3FF] mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">
+            Redirecting to your dashboard...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <MainHeader />

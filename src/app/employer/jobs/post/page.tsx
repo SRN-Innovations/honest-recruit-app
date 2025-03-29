@@ -243,7 +243,7 @@ export default function PostJob() {
       // Insert the job posting
       const { error } = await supabase.from("job_postings").insert([
         {
-          employer_id: user.id,
+          employer_id: user?.id,
           job_details: jobPosting.jobDetails,
           recruitment_process: jobPosting.recruitmentProcess,
           compensation: jobPosting.compensation,

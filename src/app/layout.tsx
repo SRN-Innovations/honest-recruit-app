@@ -4,6 +4,7 @@ import "./globals.css";
 import ThemeToggle from "../components/ThemeToggle";
 import Script from "next/script";
 import { initializeTheme } from "./theme-provider";
+import { AuthProvider } from "@/lib/auth-context";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,7 +41,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

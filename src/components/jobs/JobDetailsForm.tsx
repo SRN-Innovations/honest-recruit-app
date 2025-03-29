@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { JobPosting } from "@/app/employer/dashboard/jobs/post/page";
+import { JobPosting } from "@/app/employer/jobs/post/page";
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 
