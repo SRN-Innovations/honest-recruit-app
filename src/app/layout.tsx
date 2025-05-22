@@ -1,10 +1,9 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-import ThemeToggle from "../components/ThemeToggle";
-import Script from "next/script";
-import { initializeTheme } from "./theme-provider";
+
 import { AuthProvider } from "@/lib/auth-context";
+import { Inter } from "next/font/google";
+import type { Metadata } from "next";
+import { initializeTheme } from "./theme-provider";
 
 const inter = Inter({
   subsets: ["latin"],

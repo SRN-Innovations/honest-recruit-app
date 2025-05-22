@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import ThemeToggle from "../ThemeToggle";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
 interface MainHeaderProps {
@@ -21,7 +20,6 @@ export default function MainHeader({
   setIsSidebarOpen,
   showSignOut = false,
 }: MainHeaderProps) {
-  const router = useRouter();
   const { isLoggedIn, userType, signOut, redirectToDashboard } = useAuth();
 
   const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {

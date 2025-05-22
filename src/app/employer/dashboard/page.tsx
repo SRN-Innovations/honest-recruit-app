@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import CustomCalendar from "../../../components/Calendar";
 import Image from "next/image";
 import Link from "next/link";
-import CustomCalendar from "../../../components/Calendar";
+import { useState } from "react";
 
 interface Applicant {
   id: string;

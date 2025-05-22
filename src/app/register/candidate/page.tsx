@@ -1,18 +1,15 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { AuthError, SupabaseClient } from "@supabase/supabase-js";
+
 import Link from "next/link";
-import { Toaster, toast } from "react-hot-toast";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
-import { supabase } from "../../../lib/supabase";
-import { useRouter } from "next/navigation";
-import ThemeToggle from "../../../components/ThemeToggle";
-import MainHeader from "@/components/layout/MainHeader";
 import MainFooter from "@/components/layout/MainFooter";
+import MainHeader from "@/components/layout/MainHeader";
 import PasswordFields from "@/components/auth/PasswordFields";
-import { AuthError } from "@supabase/supabase-js";
+import { supabase } from "../../../lib/supabase";
+import { toast } from "react-hot-toast";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface FormData {
   fullName: string;
@@ -52,7 +49,7 @@ interface AddressResult {
 }
 
 const createProfiles = async (
-  supabase: any,
+  supabase: SupabaseClient,
   userData: {
     userId: string;
     fullName: string;
@@ -285,10 +282,6 @@ export default function CandidateSignUp() {
   );
   const [isSearching, setIsSearching] = useState(false);
 
-  // Add state for password
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   // Update the authError state type
   const [authError, setAuthError] = useState<
     string | React.ReactElement | null
@@ -410,8 +403,9 @@ export default function CandidateSignUp() {
           } else {
             setAuthError("An unexpected error occurred. Please try again.");
           }
-          setIsLoading(false);
           return;
+        } finally {
+          setIsLoading(false);
         }
       } else {
         setCurrentStep(currentStep + 1);
@@ -469,9 +463,13 @@ export default function CandidateSignUp() {
           "Registration successful! Please check your email to verify your account."
         );
         router.push("/signin");
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Registration error:", error);
-        setAuthError(error.message || "An error occurred during registration");
+        setAuthError(
+          error instanceof Error
+            ? error.message
+            : "An error occurred during registration"
+        );
       } finally {
         setIsLoading(false);
       }

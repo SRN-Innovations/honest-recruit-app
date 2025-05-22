@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+
 import Link from "next/link";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "react-hot-toast";
-import { format } from "date-fns";
-import { Calendar } from "@/components/CustomCalendar";
 
 interface JobListing {
   id: string;
@@ -31,14 +30,21 @@ export default function CandidateDashboard() {
     reviewed: 0,
     interviewed: 0,
   });
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
+        // Get the current user's ID
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (!session?.user?.id) {
+          throw new Error("No authenticated user found");
+        }
+
         // Fetch recent job listings
         const { data: jobs, error: jobsError } = await supabase
-          .from("job_listings")
+          .from("job_postings")
           .select("*")
           .limit(5)
           .order("created_at", { ascending: false });
@@ -50,7 +56,7 @@ export default function CandidateDashboard() {
         const { data: stats, error: statsError } = await supabase
           .from("job_applications")
           .select("status")
-          .eq("candidate_id", "current_user_id"); // Replace with actual user ID
+          .eq("candidate_id", session.user.id);
 
         if (statsError) throw statsError;
 
@@ -68,8 +74,6 @@ export default function CandidateDashboard() {
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         toast.error("Failed to load dashboard data");
-      } finally {
-        setIsLoading(false);
       }
     };
 

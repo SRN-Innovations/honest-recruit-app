@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import MainFooter from "@/components/layout/MainFooter";
 import MainHeader from "@/components/layout/MainHeader";
-import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useEffect } from "react";
 
 export default function Home() {
   const { isLoggedIn, isLoading, userType, redirectToDashboard } = useAuth();
@@ -78,6 +78,7 @@ export default function Home() {
                   width={600}
                   height={500}
                   className="object-cover rounded-lg shadow-lg w-full h-[500px]"
+                  style={{ width: "auto", height: "auto" }}
                   priority
                 />
               </div>
@@ -88,7 +89,7 @@ export default function Home() {
 
       {/* User Types Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-        <h2 className="text-3xl font-bold text-center mb-12 dark:text-white">
+        <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">
           Choose Your Path
         </h2>
         <div className="grid md:grid-cols-3 gap-8">

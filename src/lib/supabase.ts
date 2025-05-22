@@ -22,7 +22,7 @@ supabase
   .from("user_profiles")
   .select("*")
   .limit(1)
-  .then(({ data, error }) => {
+  .then(({ error }) => {
     if (error) {
       console.error("Supabase connection test failed:", error);
     } else {
