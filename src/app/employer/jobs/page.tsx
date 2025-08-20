@@ -131,7 +131,7 @@ export default function JobsPage() {
                   <option value="closed">Closed</option>
                 </select>
                 <Link
-                  href={`/employer/dashboard/jobs/${job.id}`}
+                  href={`/employer/jobs/${job.id}`}
                   className="btn-secondary"
                 >
                   View Details
