@@ -48,10 +48,14 @@ export default function JobsPage() {
         .eq("employer_id", user.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       if (data) {
         setJobs(data);
+      } else {
+        setJobs([]);
       }
     } catch (error) {
       console.error("Error fetching jobs:", error);
@@ -63,13 +67,48 @@ export default function JobsPage() {
 
   const handleStatusChange = async (jobId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
+      // Validate the new status
+      const validStatuses = ["active", "paused", "closed"];
+      if (!validStatuses.includes(newStatus)) {
+        toast.error("Invalid status value");
+        return;
+      }
+
+      // First, let's check if the job exists and get its current data
+      const { data: currentJob, error: fetchError } = await supabase
+        .from("job_postings")
+        .select("id, status, employer_id")
+        .eq("id", jobId)
+        .single();
+
+      if (fetchError) {
+        toast.error("Failed to fetch job data");
+        return;
+      }
+
+      // Verify the user owns this job
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || currentJob.employer_id !== user.id) {
+        toast.error("You don't have permission to update this job");
+        return;
+      }
+
+      // Now update the status
+      const { data, error } = await supabase
         .from("job_postings")
         .update({ status: newStatus })
-        .eq("id", jobId);
+        .eq("id", jobId)
+        .eq("employer_id", user.id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        toast.error(`Update failed: ${error.message}`);
+        return;
+      }
 
+      // Update local state immediately
       setJobs(
         jobs.map((job) =>
           job.id === jobId ? { ...job, status: newStatus } : job
@@ -77,6 +116,11 @@ export default function JobsPage() {
       );
 
       toast.success("Job status updated successfully");
+
+      // Refresh the jobs list to ensure we have the latest data
+      setTimeout(() => {
+        fetchJobs();
+      }, 500);
     } catch (error) {
       console.error("Error updating job status:", error);
       toast.error("Failed to update job status");
@@ -108,8 +152,8 @@ export default function JobsPage() {
             key={job.id}
             className="bg-white dark:bg-gray-800 rounded-lg shadow p-6"
           >
-            <div className="flex justify-between items-start">
-              <div>
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+              <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   {job.job_details.title}
                 </h2>
@@ -120,7 +164,7 @@ export default function JobsPage() {
                   {job.job_details.description}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 flex-shrink-0">
                 <select
                   value={job.status}
                   onChange={(e) => handleStatusChange(job.id, e.target.value)}
@@ -132,7 +176,7 @@ export default function JobsPage() {
                 </select>
                 <Link
                   href={`/employer/jobs/${job.id}`}
-                  className="btn-secondary"
+                  className="btn-secondary whitespace-nowrap px-4 py-2"
                 >
                   View Details
                 </Link>
