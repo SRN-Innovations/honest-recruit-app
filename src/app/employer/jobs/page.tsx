@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+
 import Link from "next/link";
 import { format } from "date-fns";
+import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 
 interface JobPosting {
@@ -25,6 +26,7 @@ interface JobPosting {
   };
   status: string;
   created_at: string;
+  applicationCount?: number;
 }
 
 export default function JobsPage() {
@@ -42,7 +44,7 @@ export default function JobsPage() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase
+      const { data: jobPostings, error } = await supabase
         .from("job_postings")
         .select("*")
         .eq("employer_id", user.id)
@@ -52,8 +54,28 @@ export default function JobsPage() {
         throw error;
       }
 
-      if (data) {
-        setJobs(data);
+      if (jobPostings) {
+        // Fetch application counts for each job
+        const jobsWithCounts = await Promise.all(
+          jobPostings.map(async (job) => {
+            const { count, error: countError } = await supabase
+              .from("job_applications")
+              .select("*", { count: "exact", head: true })
+              .eq("job_id", job.id);
+
+            if (countError) {
+              console.error(
+                `Error fetching count for job ${job.id}:`,
+                countError
+              );
+              return { ...job, applicationCount: 0 };
+            }
+
+            return { ...job, applicationCount: count || 0 };
+          })
+        );
+
+        setJobs(jobsWithCounts);
       } else {
         setJobs([]);
       }
@@ -96,7 +118,7 @@ export default function JobsPage() {
       }
 
       // Now update the status
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("job_postings")
         .update({ status: newStatus })
         .eq("id", jobId)
@@ -141,7 +163,7 @@ export default function JobsPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           Posted Jobs
         </h1>
-        <Link href="/employer/dashboard/jobs/post" className="btn-primary">
+        <Link href="/employer/jobs/post" className="btn-primary">
           Post New Job
         </Link>
       </div>
@@ -216,7 +238,7 @@ export default function JobsPage() {
                     d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                   />
                 </svg>
-                <span>0 Applications</span>
+                <span>{job.applicationCount || 0} Applications</span>
               </div>
               <div className="flex items-center gap-2">
                 <svg

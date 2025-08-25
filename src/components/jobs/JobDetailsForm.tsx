@@ -67,18 +67,8 @@ export default function JobDetailsForm({ data, onChange, errors }: Props) {
 
       const { data: skillsData, error } = await supabase
         .from("role_skills")
-        .select(
-          `
-          skills (
-            id,
-            name
-          ),
-          role_types!inner (
-            name
-          )
-        `
-        )
-        .eq("role_types.name", data.roleType);
+        .select("skill_name")
+        .eq("role_type", data.roleType);
 
       if (error) {
         console.error("Error fetching skills:", error);
@@ -86,11 +76,13 @@ export default function JobDetailsForm({ data, onChange, errors }: Props) {
       }
 
       // Transform the data to match our Skill interface
-      const skills = skillsData
-        ?.map((item) => item.skills as unknown as Skill)
-        .filter((skill): skill is Skill => skill !== null);
+      const skills =
+        skillsData?.map((item) => ({
+          id: 0, // We don't have skill IDs in role_skills table
+          name: item.skill_name,
+        })) || [];
 
-      setAvailableSkills(skills || []);
+      setAvailableSkills(skills);
     };
 
     fetchSkillsForRole();
@@ -106,36 +98,43 @@ export default function JobDetailsForm({ data, onChange, errors }: Props) {
   };
 
   const handleAddCustomSkill = async () => {
-    if (!newSkill.trim()) return;
+    if (!newSkill.trim() || !data.roleType) return;
 
     try {
-      // First check if skill already exists
-      const { data: existingSkill } = await supabase
-        .from("skills")
-        .select("id, name")
-        .eq("name", newSkill.trim())
-        .single();
+      // Add the skill to role_skills table for this role type
+      const { error: roleSkillError } = await supabase
+        .from("role_skills")
+        .insert({
+          role_type: data.roleType,
+          skill_name: newSkill.trim(),
+        });
 
-      if (existingSkill) {
-        // Skill already exists, no need to insert
-      } else {
-        // Insert new skill
-        const { error: insertError } = await supabase
-          .from("skills")
-          .insert({ name: newSkill.trim() })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
+      if (roleSkillError) {
+        // If it's a unique constraint violation, that's fine - skill already exists for this role
+        if (roleSkillError.code !== "23505") {
+          throw roleSkillError;
+        }
       }
-
-      // Note: role_skills relationship is not being maintained in this simplified version
 
       // Update local state
       const updatedSkills = [...selectedSkills, newSkill.trim()];
       setSelectedSkills(updatedSkills);
       onChange({ ...data, skills: updatedSkills });
       setNewSkill("");
+
+      // Refresh available skills
+      const { data: skillsData, error } = await supabase
+        .from("role_skills")
+        .select("skill_name")
+        .eq("role_type", data.roleType);
+
+      if (!error && skillsData) {
+        const skills = skillsData.map((item) => ({
+          id: 0,
+          name: item.skill_name,
+        }));
+        setAvailableSkills(skills);
+      }
     } catch (error) {
       console.error("Error adding skill:", error);
       toast.error("Failed to add skill. Please try again.");
@@ -427,10 +426,13 @@ export default function JobDetailsForm({ data, onChange, errors }: Props) {
                           (skill) => skill.name === skillName
                         )
                     )
-                    .map((skillName) => ({ id: skillName, name: skillName })),
-                ].map((skill) => (
+                    .map((skillName) => ({
+                      id: `custom-${skillName}`,
+                      name: skillName,
+                    })),
+                ].map((skill, index) => (
                   <button
-                    key={skill.id}
+                    key={`${skill.id}-${index}`}
                     type="button"
                     onClick={() => handleSkillToggle(skill.name)}
                     className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors
@@ -499,10 +501,13 @@ export default function JobDetailsForm({ data, onChange, errors }: Props) {
                           (skill) => skill.name === skillName
                         )
                     )
-                    .map((skillName) => ({ id: skillName, name: skillName })),
-                ].map((skill) => (
+                    .map((skillName) => ({
+                      id: `optional-${skillName}`,
+                      name: skillName,
+                    })),
+                ].map((skill, index) => (
                   <button
-                    key={skill.id}
+                    key={`${skill.id}-${index}`}
                     type="button"
                     onClick={() => handleOptionalSkillToggle(skill.name)}
                     className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-colors

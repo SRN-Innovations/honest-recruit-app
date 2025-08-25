@@ -82,6 +82,10 @@ interface CandidateProfile {
     credential_id?: string;
     credential_url?: string;
   }>;
+  open_for_work?: boolean;
+  discoverable?: boolean;
+  show_email_in_search?: boolean;
+  show_phone_in_search?: boolean;
 }
 
 interface RoleType {
@@ -96,6 +100,9 @@ export default function CandidateProfile() {
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [originalProfile, setOriginalProfile] =
+    useState<CandidateProfile | null>(null);
   const [roleTypes, setRoleTypes] = useState<RoleType[]>([]);
   const [newSkill, setNewSkill] = useState("");
   const [newExperience, setNewExperience] = useState({
@@ -131,6 +138,11 @@ export default function CandidateProfile() {
       fetchRoleTypes();
     }
   }, [userType]);
+
+  // Debug effect to monitor hasUnsavedChanges
+  useEffect(() => {
+    console.log("hasUnsavedChanges changed to:", hasUnsavedChanges);
+  }, [hasUnsavedChanges]);
 
   const fetchProfile = async () => {
     try {
@@ -201,12 +213,53 @@ export default function CandidateProfile() {
         }),
       };
 
+      console.log("Setting profile and originalProfile:", parsedProfile);
       setProfile(parsedProfile);
+      setOriginalProfile(parsedProfile);
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error("Error fetching profile:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const checkForChanges = (newProfile: CandidateProfile) => {
+    console.log("checkForChanges called with:", {
+      originalProfile,
+      newProfile,
+    });
+
+    if (!originalProfile) {
+      console.log("No originalProfile, returning false");
+      return false;
+    }
+
+    // Deep comparison of profiles
+    const originalStr = JSON.stringify(originalProfile);
+    const newStr = JSON.stringify(newProfile);
+    const hasChanges = originalStr !== newStr;
+
+    // Debug logging
+    console.log("Checking for changes:", {
+      hasChanges,
+      originalProfile: originalProfile,
+      newProfile: newProfile,
+    });
+
+    return hasChanges;
+  };
+
+  const updateProfile = (
+    updater: (profile: CandidateProfile) => CandidateProfile
+  ) => {
+    if (!profile) return;
+    const newProfile = updater(profile);
+    console.log("Updating profile:", { oldProfile: profile, newProfile });
+    setProfile(newProfile);
+    const hasChanges = checkForChanges(newProfile);
+    console.log("Setting hasUnsavedChanges to:", hasChanges);
+    setHasUnsavedChanges(hasChanges);
   };
 
   const createDefaultProfile = async (user: { id: string; email?: string }) => {
@@ -248,6 +301,10 @@ export default function CandidateProfile() {
         experience: [],
         education: [],
         certifications: [],
+        open_for_work: true,
+        discoverable: true,
+        show_email_in_search: false,
+        show_phone_in_search: false,
       };
 
       // Try to create a full profile first (now that migration should be working)
@@ -285,6 +342,10 @@ export default function CandidateProfile() {
             experience: JSON.stringify(defaultProfile.experience),
             education: JSON.stringify(defaultProfile.education),
             certifications: JSON.stringify(defaultProfile.certifications),
+            open_for_work: defaultProfile.open_for_work,
+            discoverable: defaultProfile.discoverable,
+            show_email_in_search: defaultProfile.show_email_in_search,
+            show_phone_in_search: defaultProfile.show_phone_in_search,
           });
 
         if (!fullProfileError) {
@@ -405,6 +466,10 @@ export default function CandidateProfile() {
         experience: profile.experience,
         education: profile.education,
         certifications: profile.certifications,
+        open_for_work: profile.open_for_work,
+        discoverable: profile.discoverable,
+        show_email_in_search: profile.show_email_in_search,
+        show_phone_in_search: profile.show_phone_in_search,
       });
 
       const { error } = await supabase.from("candidate_profiles").upsert({
@@ -436,6 +501,10 @@ export default function CandidateProfile() {
         experience: JSON.stringify(profile.experience || []),
         education: JSON.stringify(profile.education || []),
         certifications: JSON.stringify(profile.certifications || []),
+        open_for_work: profile.open_for_work,
+        discoverable: profile.discoverable,
+        show_email_in_search: profile.show_email_in_search,
+        show_phone_in_search: profile.show_phone_in_search,
       });
 
       if (error) {
@@ -444,6 +513,9 @@ export default function CandidateProfile() {
       }
 
       toast.success("Profile updated successfully!");
+      console.log("Save successful, updating originalProfile:", profile);
+      setOriginalProfile(profile);
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error("Error saving profile:", error);
       toast.error("Failed to save profile. Please try again.");
@@ -452,32 +524,52 @@ export default function CandidateProfile() {
     }
   };
 
+  const toTitleCase = (value: string) =>
+    value
+      .toLowerCase()
+      .split(" ")
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
   const handleAddSkill = async () => {
     if (!newSkill.trim() || !profile) return;
 
     try {
-      // Check if skill already exists
-      const { data: existingSkill } = await supabase
-        .from("skills")
-        .select("id, name")
-        .eq("name", newSkill.trim())
-        .single();
+      const roleType =
+        Array.isArray(profile.preferred_role_types) &&
+        profile.preferred_role_types.length > 0
+          ? profile.preferred_role_types[0]
+          : "General";
 
-      if (existingSkill) {
-        // Skill already exists, no need to insert
-      } else {
-        // Insert new skill
+      const rawSkill = newSkill.trim();
+      const normalizedSkill = toTitleCase(rawSkill);
+
+      // Upsert into role_skills, case-insensitive check per role
+      const { data: existingRoleSkill, error: checkError } = await supabase
+        .from("role_skills")
+        .select("id, skill_name")
+        .eq("role_type", roleType)
+        .ilike("skill_name", rawSkill);
+
+      if (checkError) throw checkError;
+
+      if (!existingRoleSkill || existingRoleSkill.length === 0) {
         const { error: insertError } = await supabase
-          .from("skills")
-          .insert({ name: newSkill.trim() })
-          .select()
-          .single();
-
+          .from("role_skills")
+          .insert({ role_type: roleType, skill_name: normalizedSkill });
         if (insertError) throw insertError;
       }
 
-      // Add to profile skills
-      const updatedSkills = [...(profile.skills || []), newSkill.trim()];
+      // Add to profile skills if not already present (case-insensitive)
+      const currentSkills = profile.skills || [];
+      const alreadyHas = currentSkills.some(
+        (s) => s.trim().toLowerCase() === rawSkill.toLowerCase()
+      );
+      const updatedSkills = alreadyHas
+        ? currentSkills
+        : [...currentSkills, normalizedSkill];
+
       setProfile({ ...profile, skills: updatedSkills });
       setNewSkill("");
 
@@ -634,12 +726,147 @@ export default function CandidateProfile() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          Candidate Profile
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Manage your profile information and professional details
-        </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Candidate Profile
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Manage your profile information and professional details
+            </p>
+          </div>
+          <div className="flex items-center space-x-4">
+            {hasUnsavedChanges && (
+              <div className="flex items-center space-x-2 text-orange-600 dark:text-orange-400">
+                <svg
+                  className="w-5 h-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span className="text-sm font-medium">Unsaved changes</span>
+              </div>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving || !hasUnsavedChanges}
+              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                saving || !hasUnsavedChanges
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Status Indicator Banner */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <div
+                className={`w-3 h-3 rounded-full ${
+                  profile.open_for_work ? "bg-green-500" : "bg-gray-400"
+                }`}
+              ></div>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                {profile.open_for_work
+                  ? "Open for Work"
+                  : "Not Actively Seeking"}
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div
+                className={`w-3 h-3 rounded-full ${
+                  profile.discoverable ? "bg-blue-500" : "bg-gray-400"
+                }`}
+              ></div>
+              <span
+                className={`text-sm font-medium ${
+                  !profile.open_for_work && !profile.discoverable
+                    ? "text-gray-500 dark:text-gray-400"
+                    : "text-gray-900 dark:text-white"
+                }`}
+              >
+                {profile.discoverable
+                  ? "Discoverable"
+                  : !profile.open_for_work
+                  ? "Hidden (Not Open for Work)"
+                  : "Hidden from Search"}
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1">
+                <svg
+                  className={`w-4 h-4 ${
+                    profile.discoverable ? "text-gray-500" : "text-gray-400"
+                  }`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                  <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                </svg>
+                <span
+                  className={`text-sm ${
+                    profile.show_email_in_search
+                      ? "text-gray-600 dark:text-gray-400"
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}
+                >
+                  {profile.show_email_in_search
+                    ? "Email visible"
+                    : "Email hidden"}
+                </span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <svg
+                  className={`w-4 h-4 ${
+                    profile.discoverable ? "text-gray-500" : "text-gray-400"
+                  }`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                </svg>
+                <span
+                  className={`text-sm ${
+                    profile.show_phone_in_search
+                      ? "text-gray-600 dark:text-gray-400"
+                      : "text-gray-400 dark:text-gray-500"
+                  }`}
+                >
+                  {profile.show_phone_in_search
+                    ? "Phone visible"
+                    : "Phone hidden"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Profile Status
+            </p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              {profile.open_for_work && profile.discoverable
+                ? "Active & Visible"
+                : profile.open_for_work
+                ? "Active but Hidden"
+                : profile.discoverable
+                ? "Visible but Not Seeking"
+                : "Hidden & Inactive"}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-8">
@@ -655,7 +882,10 @@ export default function CandidateProfile() {
                 type="text"
                 value={profile.full_name}
                 onChange={(e) =>
-                  setProfile({ ...profile, full_name: e.target.value })
+                  updateProfile((profile) => ({
+                    ...profile,
+                    full_name: e.target.value,
+                  }))
                 }
                 className="form-input"
               />
@@ -666,7 +896,10 @@ export default function CandidateProfile() {
                 type="email"
                 value={profile.email}
                 onChange={(e) =>
-                  setProfile({ ...profile, email: e.target.value })
+                  updateProfile((profile) => ({
+                    ...profile,
+                    email: e.target.value,
+                  }))
                 }
                 className="form-input"
               />
@@ -677,7 +910,10 @@ export default function CandidateProfile() {
                 type="tel"
                 value={profile.phone_number}
                 onChange={(e) =>
-                  setProfile({ ...profile, phone_number: e.target.value })
+                  updateProfile((profile) => ({
+                    ...profile,
+                    phone_number: e.target.value,
+                  }))
                 }
                 className="form-input"
               />
@@ -687,7 +923,10 @@ export default function CandidateProfile() {
               <select
                 value={profile.nationality}
                 onChange={(e) =>
-                  setProfile({ ...profile, nationality: e.target.value })
+                  updateProfile((profile) => ({
+                    ...profile,
+                    nationality: e.target.value,
+                  }))
                 }
                 className="form-select"
               >
@@ -705,7 +944,10 @@ export default function CandidateProfile() {
                 type="date"
                 value={profile.date_of_birth || ""}
                 onChange={(e) =>
-                  setProfile({ ...profile, date_of_birth: e.target.value })
+                  updateProfile((profile) => ({
+                    ...profile,
+                    date_of_birth: e.target.value,
+                  }))
                 }
                 className="form-input"
               />
@@ -715,7 +957,10 @@ export default function CandidateProfile() {
               <select
                 value={profile.gender || ""}
                 onChange={(e) =>
-                  setProfile({ ...profile, gender: e.target.value })
+                  updateProfile((profile) => ({
+                    ...profile,
+                    gender: e.target.value,
+                  }))
                 }
                 className="form-select"
               >
@@ -739,10 +984,10 @@ export default function CandidateProfile() {
                 type="text"
                 value={profile.address.street}
                 onChange={(e) =>
-                  setProfile({
+                  updateProfile((profile) => ({
                     ...profile,
                     address: { ...profile.address, street: e.target.value },
-                  })
+                  }))
                 }
                 className="form-input"
                 placeholder="123 Main St, Apt 4B"
@@ -754,10 +999,10 @@ export default function CandidateProfile() {
                 type="text"
                 value={profile.address.city}
                 onChange={(e) =>
-                  setProfile({
+                  updateProfile((profile) => ({
                     ...profile,
                     address: { ...profile.address, city: e.target.value },
-                  })
+                  }))
                 }
                 className="form-input"
                 placeholder="London"
@@ -769,10 +1014,10 @@ export default function CandidateProfile() {
                 type="text"
                 value={profile.address.state}
                 onChange={(e) =>
-                  setProfile({
+                  updateProfile((profile) => ({
                     ...profile,
                     address: { ...profile.address, state: e.target.value },
-                  })
+                  }))
                 }
                 className="form-input"
                 placeholder="Greater London"
@@ -784,10 +1029,10 @@ export default function CandidateProfile() {
                 type="text"
                 value={profile.address.postalCode}
                 onChange={(e) =>
-                  setProfile({
+                  updateProfile((profile) => ({
                     ...profile,
                     address: { ...profile.address, postalCode: e.target.value },
-                  })
+                  }))
                 }
                 className="form-input"
                 placeholder="SW1A 1AA"
@@ -799,14 +1044,184 @@ export default function CandidateProfile() {
                 type="text"
                 value={profile.address.country}
                 onChange={(e) =>
-                  setProfile({
+                  updateProfile((profile) => ({
                     ...profile,
                     address: { ...profile.address, country: e.target.value },
-                  })
+                  }))
                 }
                 className="form-input"
                 placeholder="United Kingdom"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Privacy & Visibility Settings */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+            Privacy & Visibility Settings
+          </h2>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Open for Work
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Indicate that you are actively looking for new opportunities
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const newOpenForWork = !profile.open_for_work;
+                  updateProfile((profile) => ({
+                    ...profile,
+                    open_for_work: newOpenForWork,
+                    // If turning off open for work, also disable discoverable
+                    discoverable: newOpenForWork ? profile.discoverable : false,
+                  }));
+                }}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  profile.open_for_work
+                    ? "bg-blue-600"
+                    : "bg-gray-200 dark:bg-gray-600"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    profile.open_for_work ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Discoverable
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Allow employers to find you in candidate search results
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  // Only allow discoverable to be enabled if open for work
+                  if (!profile.open_for_work && !profile.discoverable) {
+                    return; // Prevent enabling discoverable when not open for work
+                  }
+                  updateProfile((profile) => ({
+                    ...profile,
+                    discoverable: !profile.discoverable,
+                  }));
+                }}
+                disabled={!profile.open_for_work}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  !profile.open_for_work
+                    ? "bg-gray-300 dark:bg-gray-500 cursor-not-allowed"
+                    : profile.discoverable
+                    ? "bg-blue-600"
+                    : "bg-gray-200 dark:bg-gray-600"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    profile.discoverable ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Show Email in Search
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Display your email address to employers in search results
+                </p>
+              </div>
+              <button
+                onClick={() =>
+                  updateProfile((profile) => ({
+                    ...profile,
+                    show_email_in_search: !profile.show_email_in_search,
+                  }))
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  profile.show_email_in_search
+                    ? "bg-blue-600"
+                    : "bg-gray-200 dark:bg-gray-600"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    profile.show_email_in_search
+                      ? "translate-x-6"
+                      : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Show Phone in Search
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Display your phone number to employers in search results
+                </p>
+              </div>
+              <button
+                onClick={() =>
+                  updateProfile((profile) => ({
+                    ...profile,
+                    show_phone_in_search: !profile.show_phone_in_search,
+                  }))
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  profile.show_phone_in_search
+                    ? "bg-blue-600"
+                    : "bg-gray-200 dark:bg-gray-600"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    profile.show_phone_in_search
+                      ? "translate-x-6"
+                      : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg
+                  className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div>
+                  <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Privacy Information
+                  </h4>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    You must be &ldquo;Open for Work&rdquo; to be discoverable
+                    by employers. When discoverable, employers can search for
+                    and view your profile. You can control which contact details
+                    are visible in search results. Additional contact details
+                    are only shared when you are shortlisted for a position.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -821,7 +1236,10 @@ export default function CandidateProfile() {
             <textarea
               value={profile.professional_summary || ""}
               onChange={(e) =>
-                setProfile({ ...profile, professional_summary: e.target.value })
+                updateProfile((profile) => ({
+                  ...profile,
+                  professional_summary: e.target.value,
+                }))
               }
               rows={4}
               className="form-textarea"
@@ -1701,10 +2119,14 @@ export default function CandidateProfile() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={saving}
-            className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={saving || !hasUnsavedChanges}
+            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              saving || !hasUnsavedChanges
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
           >
-            {saving ? "Saving..." : "Save Profile"}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>

@@ -1,3 +1,14 @@
 #TODO
 
 password reset should use the same flow as the signup flow
+
+Here’s a clean, practical status model and when each changes:
+Pending: Candidate just applied. Created on “Apply Now”.
+Under Review: Employer has opened the application or explicitly marked it as reviewing. Triggered by employer action (e.g., “Mark as Under Review” in Applicants page).
+Shortlisted: Employer selects candidate for next step. Triggered by employer action (e.g., “Shortlist”).
+Interview Scheduled: Employer schedules interview (date/time stored in application or a related table). Triggered when interview is created.
+Interviewed: After interview concludes. Triggered by employer action (e.g., “Mark Interviewed”) or automatically when interview time passes + outcome recorded.
+Offer Extended: Employer sends offer. Triggered by employer action.
+Hired: Candidate accepts offer; onboarding begins. Triggered by employer action (e.g., “Mark Hired”) or by offer acceptance flow.
+Rejected: Employer rejects at any stage. Triggered by employer action.
+Withdrawn: Candidate withdraws their application. Triggered by candidate action.

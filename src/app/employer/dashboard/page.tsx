@@ -1,83 +1,132 @@
 "use client";
 
-import CustomCalendar from "../../../components/Calendar";
-import Image from "next/image";
+import { useEffect, useState } from "react";
+
 import Link from "next/link";
-import { useState } from "react";
-
-interface Applicant {
-  id: string;
-  name: string;
-  email: string;
-  jobTitle: string;
-  appliedDate: string;
-  status: "onBoard" | "applied" | "hired" | "rejected";
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  candidates: string[];
-}
+import { supabase } from "@/lib/supabase";
 
 function Dashboard() {
-  const [selectedMonth, setSelectedMonth] = useState("November");
+  const [stats, setStats] = useState({
+    totalApplications: 0,
+    totalApplicationsChange: 0,
+    pending: 0,
+    pendingChange: 0,
+    underReview: 0,
+    underReviewChange: 0,
+    shortlisted: 0,
+    shortlistedChange: 0,
+    onBoarded: 0,
+    onBoardedChange: 0,
+  });
 
-  // Example data - replace with real data from your backend
-  const stats = {
-    totalApplications: 1525,
-    totalApplicationsChange: 12.5,
-    shortlisted: 899,
-    shortlistedChange: 25.4,
-    onBoarded: 155,
-    onBoardedChange: 35.2,
+  const [recentJobs, setRecentJobs] = useState<
+    Array<{
+      id: string;
+      title: string;
+      company_name: string;
+      created_at: string;
+      applicationCount: number;
+    }>
+  >([]);
+
+  const loadDashboardData = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: jobs } = await supabase
+      .from("job_postings")
+      .select("id")
+      .eq("employer_id", user.id);
+    const jobIds = (jobs || []).map((j) => j.id);
+    if (jobIds.length === 0) return;
+    const { data: apps } = await supabase
+      .from("job_applications")
+      .select("status, created_at")
+      .in("job_id", jobIds);
+
+    console.log("Raw applications data:", apps);
+
+    const total = apps?.length || 0;
+    const pending = apps?.filter((a) => a.status === "pending").length || 0;
+    const underReview =
+      apps?.filter((a) => a.status === "reviewed").length || 0;
+    const shortlisted =
+      apps?.filter((a) => a.status === "shortlisted").length || 0;
+    const onBoarded = apps?.filter((a) => a.status === "accepted").length || 0;
+
+    console.log("Calculated stats:", {
+      total,
+      pending,
+      underReview,
+      shortlisted,
+      onBoarded,
+    });
+
+    setStats((s) => ({
+      ...s,
+      totalApplications: total,
+      pending,
+      underReview,
+      shortlisted,
+      onBoarded,
+    }));
+
+    // Fetch recent jobs with application counts
+    if (jobIds.length > 0) {
+      const { data: jobPostings } = await supabase
+        .from("job_postings")
+        .select("id, job_details, created_at")
+        .in("id", jobIds)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (jobPostings) {
+        // Fetch application counts for each job
+        const jobsWithCounts = await Promise.all(
+          jobPostings.map(async (job) => {
+            const { count, error: countError } = await supabase
+              .from("job_applications")
+              .select("*", { count: "exact", head: true })
+              .eq("job_id", job.id);
+
+            if (countError) {
+              console.error(
+                `Error fetching count for job ${job.id}:`,
+                countError
+              );
+              return {
+                id: job.id,
+                title: job.job_details?.title || "Untitled Position",
+                company_name: "Your Company", // We'll get this from employer profile
+                created_at: job.created_at,
+                applicationCount: 0,
+              };
+            }
+
+            return {
+              id: job.id,
+              title: job.job_details?.title || "Untitled Position",
+              company_name: "Your Company", // We'll get this from employer profile
+              created_at: job.created_at,
+              applicationCount: count || 0,
+            };
+          })
+        );
+
+        setRecentJobs(jobsWithCounts);
+      }
+    }
   };
 
-  const tasks: Task[] = [
-    {
-      id: "1",
-      title: "Candidate Shortlisting",
-      description:
-        "Collaborate with hiring managers to finalize the shortlist.",
-      candidates: [
-        "/avatars/1.jpg",
-        "/avatars/2.jpg",
-        "/avatars/3.jpg",
-        "/avatars/4.jpg",
-        "/avatars/5.jpg",
-      ],
-    },
-    {
-      id: "2",
-      title: "Interview Feedback Collection",
-      description: "Gather feedback from interviewers post-interview.",
-      candidates: [
-        "/avatars/6.jpg",
-        "/avatars/7.jpg",
-        "/avatars/8.jpg",
-        "/avatars/9.jpg",
-        "/avatars/10.jpg",
-      ],
-    },
-  ];
-
-  const applicants: Applicant[] = [
-    {
-      id: "1",
-      name: "Richard Evans",
-      email: "richard.evans@mail.com",
-      jobTitle: "Developer",
-      appliedDate: "03/12/24",
-      status: "onBoard",
-    },
-    // ... add more applicants
-  ];
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
 
   return (
     <div className="p-8">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
         <div className="bg-[#F1FFE4] dark:bg-[#1E2A1E] rounded-2xl p-6">
           <h3 className="text-gray-800 dark:text-gray-100 text-lg font-semibold mb-4">
             Total Applications
@@ -92,6 +141,34 @@ function Dashboard() {
           </div>
         </div>
 
+        <div className="bg-[#FFE6E6] dark:bg-[#3A1A1A] rounded-2xl p-6">
+          <h3 className="text-gray-800 dark:text-gray-100 text-lg font-semibold mb-4">
+            Pending
+          </h3>
+          <div className="flex items-end justify-between">
+            <span className="text-gray-900 dark:text-white text-4xl font-bold">
+              {stats.pending}
+            </span>
+            <span className="text-red-600 dark:text-red-400">
+              Today {stats.pendingChange}% ↗
+            </span>
+          </div>
+        </div>
+
+        <div className="bg-[#E6F3FF] dark:bg-[#1A2A3A] rounded-2xl p-6">
+          <h3 className="text-gray-800 dark:text-gray-100 text-lg font-semibold mb-4">
+            Under Review
+          </h3>
+          <div className="flex items-end justify-between">
+            <span className="text-gray-900 dark:text-white text-4xl font-bold">
+              {stats.underReview}
+            </span>
+            <span className="text-blue-600 dark:text-blue-400">
+              Today {stats.underReviewChange}% ↗
+            </span>
+          </div>
+        </div>
+
         <div className="bg-[#F4F1FF] dark:bg-[#1E1A2E] rounded-2xl p-6">
           <h3 className="text-gray-800 dark:text-gray-100 text-lg font-semibold mb-4">
             Shortlisted
@@ -100,7 +177,7 @@ function Dashboard() {
             <span className="text-gray-900 dark:text-white text-4xl font-bold">
               {stats.shortlisted}
             </span>
-            <span className="text-emerald-600 dark:text-emerald-400">
+            <span className="text-purple-600 dark:text-purple-400">
               Today {stats.shortlistedChange}% ↘
             </span>
           </div>
@@ -108,174 +185,80 @@ function Dashboard() {
 
         <div className="bg-[#FFF8E6] dark:bg-[#2A2518] rounded-2xl p-6">
           <h3 className="text-gray-800 dark:text-gray-100 text-lg font-semibold mb-4">
-            On Boarded
+            Hired
           </h3>
           <div className="flex items-end justify-between">
             <span className="text-gray-900 dark:text-white text-4xl font-bold">
               {stats.onBoarded}
             </span>
-            <span className="text-emerald-600 dark:text-emerald-400">
+            <span className="text-yellow-600 dark:text-yellow-400">
               Today {stats.onBoardedChange}% ↗
             </span>
           </div>
         </div>
       </div>
 
-      {/* Tasks and Calendar Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Today's Tasklist */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-gray-900 dark:text-white text-xl font-semibold">
-              Todays Tasklist
-            </h3>
-            <Link
-              href="/tasks"
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              See All
-            </Link>
-          </div>
-
-          <div className="space-y-6">
-            {tasks.map((task) => (
-              <div key={task.id} className="flex justify-between items-start">
-                <div>
-                  <h4 className="text-gray-900 dark:text-white font-semibold mb-1">
-                    {task.title}
-                  </h4>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    {task.description}
-                  </p>
-                  <div className="flex -space-x-2 mt-2">
-                    {task.candidates.map((avatar, index) => (
-                      <Image
-                        key={index}
-                        src={avatar}
-                        alt="Candidate"
-                        width={32}
-                        height={32}
-                        className="rounded-full border-2 border-white"
-                      />
-                    ))}
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs">
-                      +
-                      {task.candidates.length > 5
-                        ? task.candidates.length - 5
-                        : ""}
-                    </div>
-                  </div>
-                </div>
-                <button className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
-                  •••
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 bg-[#4CAF50] dark:bg-[#2E7D32] text-white p-4 rounded-xl flex justify-between items-center">
-            <span>You have another 5 tasks today, Keep it up!</span>
-            <button className="p-2 text-white hover:bg-[#45a049] dark:hover:bg-[#266A2A] rounded-lg">
-              →
-            </button>
-          </div>
-        </div>
-
-        {/* Calendar */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-gray-900 dark:text-white text-xl font-semibold">
-              Calendar
-            </h3>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="border-none bg-transparent text-gray-700 dark:text-gray-300 font-medium"
-            >
-              <option value="November">November</option>
-              {/* Add more months */}
-            </select>
-          </div>
-          <CustomCalendar />
-        </div>
-      </div>
-
-      {/* Applicant Details */}
+      {/* Recent Jobs Section */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-8">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-gray-900 dark:text-white text-xl font-semibold">
-            Applicant Details
+            Recent Job Postings
           </h3>
           <Link
-            href="/applicants"
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            href="/employer/jobs"
+            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
           >
-            View All
+            View All Jobs
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-gray-600 dark:text-gray-400">
-                <th className="pb-4">Applicant Name</th>
-                <th className="pb-4">Job Title</th>
-                <th className="pb-4">Applied Date</th>
-                <th className="pb-4">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {applicants.map((applicant) => (
-                <tr
-                  key={applicant.id}
-                  className="border-t border-gray-100 dark:border-gray-700"
-                >
-                  <td className="py-4">
-                    <div className="flex items-center gap-3">
-                      <Image
-                        src={`/avatars/${applicant.id}.jpg`}
-                        alt={applicant.name}
-                        width={40}
-                        height={40}
-                        className="rounded-full"
-                      />
-                      <div>
-                        <div className="text-gray-900 dark:text-white font-medium">
-                          {applicant.name}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {applicant.email}
-                        </div>
-                      </div>
+        {recentJobs.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500 dark:text-gray-400">
+              No job postings yet. Create your first job posting to get started!
+            </p>
+            <Link
+              href="/employer/jobs/post"
+              className="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Post a Job
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {recentJobs.map((job) => (
+              <div
+                key={job.id}
+                className="flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+              >
+                <div className="flex-1">
+                  <h4 className="text-gray-900 dark:text-white font-semibold">
+                    {job.title}
+                  </h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Posted on {new Date(job.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {job.applicationCount}
                     </div>
-                  </td>
-                  <td className="py-4 text-gray-900 dark:text-white">
-                    {applicant.jobTitle}
-                  </td>
-                  <td className="py-4 text-gray-900 dark:text-white">
-                    {applicant.appliedDate}
-                  </td>
-                  <td className="py-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        applicant.status === "onBoard"
-                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                          : applicant.status === "hired"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : applicant.status === "rejected"
-                          ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                          : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                      }`}
-                    >
-                      {applicant.status.charAt(0).toUpperCase() +
-                        applicant.status.slice(1)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Applications
+                    </div>
+                  </div>
+                  <a
+                    href={`/employer/jobs/${job.id}`}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    View Details
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

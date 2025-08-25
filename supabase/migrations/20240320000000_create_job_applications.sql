@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS public.job_applications (
 ALTER TABLE public.job_applications ENABLE ROW LEVEL SECURITY;
 
 -- Policy for candidates to view their own applications
+DROP POLICY IF EXISTS "Candidates can view their own applications" ON public.job_applications;
 CREATE POLICY "Candidates can view their own applications"
     ON public.job_applications
     FOR SELECT
@@ -23,6 +24,7 @@ CREATE POLICY "Candidates can view their own applications"
     USING (auth.uid() = candidate_id);
 
 -- Policy for candidates to create applications
+DROP POLICY IF EXISTS "Candidates can create applications" ON public.job_applications;
 CREATE POLICY "Candidates can create applications"
     ON public.job_applications
     FOR INSERT
@@ -30,6 +32,7 @@ CREATE POLICY "Candidates can create applications"
     WITH CHECK (auth.uid() = candidate_id);
 
 -- Policy for candidates to update their own applications
+DROP POLICY IF EXISTS "Candidates can update their own applications" ON public.job_applications;
 CREATE POLICY "Candidates can update their own applications"
     ON public.job_applications
     FOR UPDATE
@@ -38,6 +41,7 @@ CREATE POLICY "Candidates can update their own applications"
     WITH CHECK (auth.uid() = candidate_id);
 
 -- Policy for employers to view applications for their job postings
+DROP POLICY IF EXISTS "Employers can view applications for their job postings" ON public.job_applications;
 CREATE POLICY "Employers can view applications for their job postings"
     ON public.job_applications
     FOR SELECT
@@ -51,6 +55,7 @@ CREATE POLICY "Employers can view applications for their job postings"
     );
 
 -- Policy for employers to update applications for their job postings
+DROP POLICY IF EXISTS "Employers can update applications for their job postings" ON public.job_applications;
 CREATE POLICY "Employers can update applications for their job postings"
     ON public.job_applications
     FOR UPDATE
@@ -73,6 +78,7 @@ END;
 $$ language 'plpgsql';
 
 -- Create trigger to automatically update updated_at
+DROP TRIGGER IF EXISTS set_updated_at ON public.job_applications;
 CREATE TRIGGER set_updated_at
     BEFORE UPDATE ON public.job_applications
     FOR EACH ROW

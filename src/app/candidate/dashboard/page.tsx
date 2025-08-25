@@ -65,6 +65,19 @@ export default function CandidateDashboard() {
           throw new Error("No authenticated user found");
         }
 
+        // Fetch user's applications first to filter out already applied jobs
+        const { data: userApplications, error: applicationsError } =
+          await supabase
+            .from("job_applications")
+            .select("job_id")
+            .eq("candidate_id", session.user.id);
+
+        if (applicationsError) throw applicationsError;
+
+        const appliedJobIds = new Set(
+          (userApplications || []).map((app) => app.job_id)
+        );
+
         // Fetch matched jobs using the edge function
         try {
           const { data, error } = await supabase.functions.invoke(
@@ -78,8 +91,14 @@ export default function CandidateDashboard() {
 
           const response = data;
           const matches = response.matches || [];
+
+          // Filter out jobs that have already been applied for
+          const availableMatches = matches.filter(
+            (match: JobMatch) => !appliedJobIds.has(match.job.id)
+          );
+
           // Limit to 5 jobs for dashboard display
-          setMatchedJobs(matches.slice(0, 5));
+          setMatchedJobs(availableMatches.slice(0, 5));
         } catch (edgeFunctionError) {
           console.log(
             "Edge function failed, using fallback:",
@@ -90,13 +109,18 @@ export default function CandidateDashboard() {
             .from("job_postings")
             .select("*")
             .eq("status", "active")
-            .limit(5)
             .order("created_at", { ascending: false });
 
           if (jobsError) throw jobsError;
 
-          const fallbackMatches: JobMatch[] = (jobPostings || []).map(
-            (job) => ({
+          // Filter out already applied jobs in fallback too
+          const availableJobs = (jobPostings || []).filter(
+            (job) => !appliedJobIds.has(job.id)
+          );
+
+          const fallbackMatches: JobMatch[] = availableJobs
+            .slice(0, 5)
+            .map((job) => ({
               job: {
                 ...job,
                 title: job.title || job.job_title || "Untitled Position",
@@ -112,8 +136,7 @@ export default function CandidateDashboard() {
               },
               score: 50,
               matchReasons: ["Job available for application"],
-            })
-          );
+            }));
 
           setMatchedJobs(fallbackMatches);
         }

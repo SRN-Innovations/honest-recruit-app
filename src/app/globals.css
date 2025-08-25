@@ -23,6 +23,44 @@ body {
   background: var(--background);
 }
 
+/* Themed scrollbars */
+* {
+  scrollbar-width: thin;
+  /* thumb color track color */
+  scrollbar-color: #3b82f6 transparent; /* blue-500 */
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #3b82f6; /* blue-500 */
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #2563eb; /* blue-600 */
+}
+
+@media (prefers-color-scheme: dark) {
+  * {
+    scrollbar-color: #2563eb transparent; /* blue-600 */
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: #2563eb; /* blue-600 */
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #1d4ed8; /* blue-700 */
+  }
+}
+
 @layer components {
   .card {
     @apply p-6 rounded-lg shadow-md bg-white dark:bg-gray-800 border border-gray-100 hover:shadow-md transition-shadow;
@@ -69,6 +107,26 @@ body {
     @apply px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 
     rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 
     focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 
+    dark:focus:ring-offset-gray-800 transition-colors;
+  }
+
+  .btn-outline {
+    @apply px-4 py-2 bg-transparent border border-gray-300 dark:border-gray-600 
+    text-gray-700 dark:text-gray-200 rounded-md 
+    hover:bg-gray-50 dark:hover:bg-gray-700 
+    focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 
+    dark:focus:ring-offset-gray-800 transition-colors;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 
+    focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 
+    dark:focus:ring-offset-gray-800 transition-colors;
+  }
+
+  .btn-success {
+    @apply px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 
+    focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 
     dark:focus:ring-offset-gray-800 transition-colors;
   }
 }

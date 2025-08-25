@@ -1,13 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
 
 interface MainFooterProps {
   isSidebarOpen?: boolean;
 }
 
 export default function MainFooter({ isSidebarOpen }: MainFooterProps) {
+  const { isLoggedIn, userType } = useAuth();
   return (
     <footer className="bg-white dark:bg-gray-800 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -60,86 +62,90 @@ export default function MainFooter({ isSidebarOpen }: MainFooterProps) {
           </div>
 
           {/* For Job Seekers */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-              For Job Seekers
-            </h3>
-            <ul className="space-y-3">
-              <li>
-                <Link
-                  href="/jobs/search"
-                  className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                >
-                  Browse Jobs
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/career-advice"
-                  className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                >
-                  Career Advice
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/resume-tips"
-                  className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                >
-                  Resume Tips
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/salary-guide"
-                  className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                >
-                  Salary Guide
-                </Link>
-              </li>
-            </ul>
-          </div>
+          {!(isLoggedIn && userType === "employer") && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
+                For Job Seekers
+              </h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link
+                    href="/jobs/search"
+                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
+                  >
+                    Browse Jobs
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/career-advice"
+                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
+                  >
+                    Career Advice
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/resume-tips"
+                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
+                  >
+                    Resume Tips
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/salary-guide"
+                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
+                  >
+                    Salary Guide
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
 
           {/* For Employers */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-              For Employers
-            </h3>
-            <ul className="space-y-3">
-              <li>
-                <Link
-                  href="/post-job"
-                  className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                >
-                  Post a Job
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/talent-search"
-                  className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                >
-                  Talent Search
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/pricing"
-                  className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                >
-                  Pricing
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/recruitment-solutions"
-                  className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
-                >
-                  Recruitment Solutions
-                </Link>
-              </li>
-            </ul>
-          </div>
+          {!(isLoggedIn && userType === "candidate") && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
+                For Employers
+              </h3>
+              <ul className="space-y-3">
+                <li>
+                  <Link
+                    href="/post-job"
+                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
+                  >
+                    Post a Job
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/talent-search"
+                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
+                  >
+                    Talent Search
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/pricing"
+                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
+                  >
+                    Pricing
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/recruitment-solutions"
+                    className="text-gray-600 dark:text-gray-300 hover:text-[#00A3FF] text-sm"
+                  >
+                    Recruitment Solutions
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
 
           {/* Company */}
           <div>

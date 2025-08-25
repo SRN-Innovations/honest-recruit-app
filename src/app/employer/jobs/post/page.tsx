@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, useState } from "react";
+
 import CompensationForm from "@/components/jobs/CompensationForm";
 import JobDetailsForm from "@/components/jobs/JobDetailsForm";
 import LegalForm from "@/components/jobs/LegalForm";
@@ -8,7 +10,6 @@ import RecruitmentProcessForm from "@/components/jobs/RecruitmentProcessForm";
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { useState, useRef } from "react";
 
 export interface JobPosting {
   jobDetails: {
@@ -279,7 +280,7 @@ export default function PostJob() {
       }
 
       toast.success("Job posted successfully!");
-      router.push("/employer/dashboard/jobs");
+      router.push("/employer/jobs");
     } catch (error) {
       console.error("Error posting job:", error);
       toast.error("Failed to post job. Please try again.");

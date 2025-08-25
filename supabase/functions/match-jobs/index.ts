@@ -63,6 +63,46 @@ interface JobMatch {
   skillMatch: number;
   salaryMatch: number;
   preferenceMatch: number;
+  breakdown: {
+    weights: {
+      role: number;
+      employment: number;
+      location: number;
+      hours: number;
+      skills: number;
+      salary: number;
+      languages: number;
+    };
+    role: { matched: boolean; reason: string };
+    employment: { matched: boolean; reason: string };
+    location: { matched: boolean; reason: string };
+    hours: { matched: boolean; reason: string };
+    skills: {
+      matchedCount: number;
+      totalCount: number;
+      matched: string[];
+      missing: string[];
+    };
+    salary: {
+      matched: boolean;
+      jobAverage: number | null;
+      candidate: {
+        type: string;
+        exact?: number;
+        min?: number;
+        max?: number;
+      } | null;
+      reason: string;
+    };
+    languages: {
+      matchedPairs: number;
+      pairs: Array<{
+        language: string;
+        required: string[];
+        provided: string[];
+      }>;
+    };
+  };
 }
 
 serve(async (req) => {
@@ -104,17 +144,10 @@ serve(async (req) => {
       .single();
 
     if (profileError || !candidateProfile) {
-      console.log("Profile error:", profileError);
-      console.log("Profile data:", candidateProfile);
+      console.log("Profile not found; returning empty matches response.");
       return new Response(
-        JSON.stringify({
-          error: "Candidate profile not found",
-          details: profileError,
-        }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        JSON.stringify({ matches: [], totalJobs: 0, matchedJobs: 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -128,11 +161,11 @@ serve(async (req) => {
 
     console.log("Available tables:", tables);
 
-    // Fetch all active job postings
+    // Fetch all active job postings (no embedded joins)
     console.log("Fetching active job postings...");
     const { data: jobPostings, error: jobsError } = await supabaseClient
       .from("job_postings")
-      .select("*")
+      .select(`*`)
       .eq("status", "active")
       .order("created_at", { ascending: false });
 
@@ -153,6 +186,38 @@ serve(async (req) => {
     console.log("Found job postings:", jobPostings);
     console.log("Number of active jobs:", jobPostings?.length || 0);
 
+    // Fetch employer profiles and merge company names server-side
+    let employerIdToCompanyName: Record<string, string> = {};
+    try {
+      const employerIds = Array.from(
+        new Set(
+          (jobPostings || []).map((j: any) => j.employer_id).filter(Boolean)
+        )
+      );
+      if (employerIds.length > 0) {
+        const { data: employers, error: employersError } = await supabaseClient
+          .from("employer_profiles")
+          .select("id, company_name")
+          .in("id", employerIds);
+        if (!employersError && employers) {
+          employerIdToCompanyName = employers.reduce(
+            (
+              acc: Record<string, string>,
+              curr: { id: string; company_name: string }
+            ) => {
+              acc[curr.id] = curr.company_name;
+              return acc;
+            },
+            {}
+          );
+        } else if (employersError) {
+          console.log("Error fetching employer profiles:", employersError);
+        }
+      }
+    } catch (e) {
+      console.log("Failed to merge employer names:", e);
+    }
+
     // Parse JSON fields and handle flexible column names
     console.log("Parsing job postings...");
     const parsedJobs: JobPosting[] = jobPostings.map((job) => {
@@ -165,7 +230,10 @@ serve(async (req) => {
         title:
           jobDetails.title || job.title || job.job_title || "Untitled Position",
         company_name:
-          job.company_name || job.company || "Company Not Specified",
+          employerIdToCompanyName[job.employer_id as string] ||
+          job.company_name ||
+          job.company ||
+          "Company Not Specified",
         role_type: jobDetails.roleType || job.role_type,
         employment_type: jobDetails.employmentType || job.employment_type,
         location: jobDetails.location || job.location,
@@ -253,11 +321,84 @@ serve(async (req) => {
 
     // Match jobs with candidate profile
     console.log("Starting job matching process...");
+    const url = new URL(req.url);
+    const debug = url.searchParams.get("debug") === "true";
     const matchedJobs: JobMatch[] = parsedJobs.map((job) => {
-      console.log(`\n--- Matching job: ${job.title} ---`);
       const match = calculateJobMatch(job, parsedProfile);
-      console.log(`Match score: ${match.score}%`);
-      console.log(`Match reasons:`, match.matchReasons);
+      if (debug || match.score < 90) {
+        console.log(
+          `\n--- Match breakdown for: ${job.title} (${match.score}%) ---`
+        );
+        console.log(`Score: ${match.score}%`);
+        console.log(`Reasons: ${match.matchReasons.join(", ")}`);
+        console.log(`\nSkills Analysis:`);
+        console.log(`  Required Skills: ${job.skills?.join(", ") || "None"}`);
+        console.log(
+          `  Optional Skills: ${job.optional_skills?.join(", ") || "None"}`
+        );
+        console.log(
+          `  Your Skills: ${parsedProfile.skills?.join(", ") || "None"}`
+        );
+        console.log(
+          `  Matched Skills: ${
+            match.breakdown.skills.matched.join(", ") || "None"
+          }`
+        );
+        console.log(
+          `  Missing Skills: ${
+            match.breakdown.skills.missing.join(", ") || "None"
+          }`
+        );
+        console.log(
+          `  Skills Score: ${match.breakdown.skills.matchedCount}/${
+            match.breakdown.skills.totalCount
+          } (${Math.round(
+            (match.breakdown.skills.matchedCount /
+              match.breakdown.skills.totalCount) *
+              100
+          )}%)`
+        );
+
+        if (match.breakdown.salary.jobAverage) {
+          console.log(`\nSalary Analysis:`);
+          console.log(
+            `  Job Salary: £${match.breakdown.salary.jobAverage.toLocaleString()}`
+          );
+          console.log(
+            `  Your Expectations: ${JSON.stringify(
+              match.breakdown.salary.candidate
+            )}`
+          );
+          console.log(
+            `  Salary Match: ${match.breakdown.salary.matched ? "Yes" : "No"}`
+          );
+        }
+
+        console.log(`\nOther Factors:`);
+        console.log(
+          `  Role Type: ${match.breakdown.role.matched ? "✓" : "✗"} ${
+            match.breakdown.role.reason
+          }`
+        );
+        console.log(
+          `  Employment: ${match.breakdown.employment.matched ? "✓" : "✗"} ${
+            match.breakdown.employment.reason
+          }`
+        );
+        console.log(
+          `  Location: ${match.breakdown.location.matched ? "✓" : "✗"} ${
+            match.breakdown.location.reason
+          }`
+        );
+        console.log(
+          `  Hours: ${match.breakdown.hours.matched ? "✓" : "✗"} ${
+            match.breakdown.hours.reason
+          }`
+        );
+        console.log(
+          `  Languages: ${match.breakdown.languages.matchedPairs} pairs matched`
+        );
+      }
       return match;
     });
 
@@ -314,48 +455,49 @@ function calculateJobMatch(
 ): JobMatch {
   let score = 0;
   const matchReasons: string[] = [];
+  const weights = {
+    role: 25,
+    employment: 15,
+    location: 15,
+    hours: 10,
+    skills: 20,
+    salary: 10,
+    languages: 5,
+  };
 
   // 1. Role Type Match (Weight: 25%)
-  const roleMatch = candidate.preferred_role_types.includes(job.role_type)
-    ? 1
-    : 0;
-  if (roleMatch) {
-    score += 25;
+  const roleMatched = candidate.preferred_role_types.includes(job.role_type);
+  if (roleMatched) {
+    score += weights.role;
     matchReasons.push(`Role type matches your preference: ${job.role_type}`);
   }
 
   // 2. Employment Type Match (Weight: 15%)
-  const employmentMatch = candidate.preferred_employment_types.includes(
+  const employmentMatched = candidate.preferred_employment_types.includes(
     job.employment_type
-  )
-    ? 1
-    : 0;
-  if (employmentMatch) {
-    score += 15;
+  );
+  if (employmentMatched) {
+    score += weights.employment;
     matchReasons.push(
       `Employment type matches your preference: ${job.employment_type}`
     );
   }
 
   // 3. Location Type Match (Weight: 15%)
-  const locationMatch = candidate.preferred_location_types.includes(
+  const locationMatched = candidate.preferred_location_types.includes(
     job.location
-  )
-    ? 1
-    : 0;
-  if (locationMatch) {
-    score += 15;
+  );
+  if (locationMatched) {
+    score += weights.location;
     matchReasons.push(`Location type matches your preference: ${job.location}`);
   }
 
   // 4. Working Hours Match (Weight: 10%)
-  const hoursMatch = candidate.preferred_working_hours.includes(
+  const hoursMatched = candidate.preferred_working_hours.includes(
     job.working_hours
-  )
-    ? 1
-    : 0;
-  if (hoursMatch) {
-    score += 10;
+  );
+  if (hoursMatched) {
+    score += weights.hours;
     matchReasons.push(
       `Working hours match your preference: ${job.working_hours}`
     );
@@ -376,7 +518,7 @@ function calculateJobMatch(
     ).length;
 
     const skillMatchPercentage = skillMatches / totalSkills;
-    score += skillMatchPercentage * 20;
+    score += skillMatchPercentage * weights.skills;
 
     if (skillMatches > 0) {
       matchReasons.push(
@@ -396,13 +538,13 @@ function calculateJobMatch(
       if (difference <= 0.1) {
         // Within 10%
         salaryMatch = 1;
-        score += 10;
+        score += weights.salary;
         matchReasons.push("Salary matches your expectations");
       }
     } else if (type === "range" && min && max) {
       if (jobSalary >= min && jobSalary <= max) {
         salaryMatch = 1;
-        score += 10;
+        score += weights.salary;
         matchReasons.push("Salary is within your expected range");
       }
     }
@@ -425,17 +567,84 @@ function calculateJobMatch(
   });
 
   if (languageMatches > 0) {
-    score += Math.min(5, languageMatches * 1.5);
+    score += Math.min(weights.languages, languageMatches * 1.5);
     matchReasons.push(`Language requirements match your skills`);
   }
+
+  // Build breakdown for logging/debugging
+  const breakdown: JobMatch["breakdown"] = {
+    weights,
+    role: {
+      matched: roleMatched,
+      reason: roleMatched
+        ? `Preferred role includes ${job.role_type}`
+        : `Preferred roles do not include ${job.role_type}`,
+    },
+    employment: {
+      matched: employmentMatched,
+      reason: employmentMatched
+        ? `Preferred employment includes ${job.employment_type}`
+        : `Preferred employment types do not include ${job.employment_type}`,
+    },
+    location: {
+      matched: locationMatched,
+      reason: locationMatched
+        ? `Preferred locations include ${job.location}`
+        : `Preferred locations do not include ${job.location}`,
+    },
+    hours: {
+      matched: hoursMatched,
+      reason: hoursMatched
+        ? `Preferred hours include ${job.working_hours}`
+        : `Preferred hours do not include ${job.working_hours}`,
+    },
+    skills: {
+      matchedCount: skillMatches,
+      totalCount: totalSkills,
+      matched: allJobSkills.filter((s) => candidateSkills.includes(s)),
+      missing: allJobSkills.filter((s) => !candidateSkills.includes(s)),
+    },
+    salary: {
+      matched: salaryMatch === 1,
+      jobAverage: isFinite((job.salary_min + job.salary_max) / 2)
+        ? (job.salary_min + job.salary_max) / 2
+        : null,
+      candidate: candidate.salary_expectations || null,
+      reason:
+        salaryMatch === 1
+          ? "Salary aligned"
+          : "Salary not aligned or expectations not set",
+    },
+    languages: {
+      matchedPairs: languageMatches,
+      pairs: jobLanguages.map((jl) => {
+        const c = candidateLanguages.find((cl) => cl.language === jl.language);
+        return {
+          language: jl.language,
+          required: [
+            jl.speak ? "speak" : null,
+            jl.read ? "read" : null,
+            jl.write ? "write" : null,
+          ].filter(Boolean) as string[],
+          provided: c
+            ? [
+                c.speak ? "speak" : null,
+                c.read ? "read" : null,
+                c.write ? "write" : null,
+              ].filter(Boolean)
+            : [],
+        };
+      }),
+    },
+  };
 
   return {
     job,
     score: Math.round(score),
     matchReasons,
-    // Remove detailed breakdowns - only keep overall score and reasons
     skillMatch: 0,
     salaryMatch: 0,
     preferenceMatch: 0,
+    breakdown,
   };
 }
