@@ -1,5 +1,13 @@
 #TODO
 
+- candidate needs to be able to view company profile details
+- build out the subscription flow
+- build out the payment flow
+- build out the invoice flow
+- build out the payment history flow
+- build out the payment methods flow
+- build out the payment methods flow
+
 password reset should use the same flow as the signup flow
 
 Here’s a clean, practical status model and when each changes:

@@ -54,7 +54,7 @@ export default function Home() {
                 </h1>
                 <p className="text-xl text-blue-50 max-w-2xl mx-auto md:mx-0 mb-8">
                   Connect with the right talent and opportunities through our
-                  AI-powered recruitment platform.
+                  smart matching recruitment platform.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
                   <Link
