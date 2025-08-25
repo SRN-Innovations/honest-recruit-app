@@ -1,6 +1,11 @@
 "use client";
 
 import { AuthError, SupabaseClient } from "@supabase/supabase-js";
+import {
+  GENDER_OPTIONS,
+  NATIONALITIES,
+  RIGHT_TO_WORK_OPTIONS,
+} from "@/lib/constants";
 
 import Link from "next/link";
 import MainFooter from "@/components/layout/MainFooter";
@@ -73,9 +78,6 @@ const createProfiles = async (
   },
   maxAttempts = 3
 ): Promise<void> => {
-  // Format the address for storage
-  const formattedAddress = `${userData.address.street}, ${userData.address.city}, ${userData.address.state} ${userData.address.postalCode}, ${userData.address.country}`;
-
   // Format the right to work information
   const rightToWorkInfo = {
     status: userData.rightToWork.status,
@@ -88,36 +90,77 @@ const createProfiles = async (
   };
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const { error } = await supabase.rpc("create_candidate_profiles", {
-      p_user_id: userData.userId,
-      p_full_name: userData.fullName,
-      p_email: userData.email,
-      p_phone_number: userData.phoneNumber,
-      p_address: formattedAddress,
-      p_date_of_birth: userData.dateOfBirth,
-      p_gender: userData.gender,
-      p_nationality: userData.nationality,
-      p_right_to_work: rightToWorkInfo,
-    });
+    try {
+      // Create user profile first
+      const { error: userProfileError } = await supabase
+        .from("user_profiles")
+        .insert({
+          id: userData.userId,
+          user_type: "candidate",
+        });
 
-    if (!error) return;
-
-    if (
-      error.message.includes("User does not exist in auth.users") ||
-      error.message.includes("violates foreign key constraint")
-    ) {
-      if (attempt === maxAttempts) {
-        throw new Error(
-          "Account creation is taking longer than expected. Please try signing in after a few minutes."
-        );
+      if (userProfileError) {
+        console.error("User profile creation error:", userProfileError);
+        if (attempt === maxAttempts) {
+          throw new Error("Failed to create user profile");
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        continue;
       }
-      // Wait longer between each attempt
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      continue;
-    }
 
-    // If it's not a user existence error, throw immediately
-    throw error;
+      // Create candidate profile with basic structure (only columns that exist)
+      console.log("Creating candidate profile with data:", {
+        id: userData.userId,
+        full_name: userData.fullName,
+        email: userData.email,
+        phone_number: userData.phoneNumber,
+        address: userData.address,
+        date_of_birth: userData.dateOfBirth,
+        gender: userData.gender,
+        nationality: userData.nationality,
+        right_to_work: rightToWorkInfo,
+      });
+
+      const { error: candidateProfileError } = await supabase
+        .from("candidate_profiles")
+        .insert({
+          id: userData.userId,
+          full_name: userData.fullName,
+          email: userData.email,
+          phone_number: userData.phoneNumber,
+          address: JSON.stringify(userData.address),
+          date_of_birth: userData.dateOfBirth,
+          gender: userData.gender,
+          nationality: userData.nationality,
+          right_to_work: JSON.stringify(rightToWorkInfo),
+        });
+
+      if (candidateProfileError) {
+        console.error(
+          "Candidate profile creation error:",
+          candidateProfileError
+        );
+        console.error("Error details:", {
+          code: candidateProfileError.code,
+          message: candidateProfileError.message,
+          details: candidateProfileError.details,
+          hint: candidateProfileError.hint,
+        });
+        if (attempt === maxAttempts) {
+          throw new Error("Failed to create candidate profile");
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        continue;
+      }
+
+      // Success - both profiles created
+      return;
+    } catch (error) {
+      if (attempt === maxAttempts) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
   }
 };
 
@@ -141,82 +184,7 @@ const searchAddresses = async (query: string): Promise<AddressResult[]> => {
   }
 };
 
-// Add this constant at the top with other constants
-const nationalities = [
-  "British",
-  "Irish",
-  "French",
-  "German",
-  "Italian",
-  "Spanish",
-  "Polish",
-  "Romanian",
-  "Portuguese",
-  "Greek",
-  "Dutch",
-  "Belgian",
-  "Swedish",
-  "Danish",
-  "Norwegian",
-  "Finnish",
-  "Swiss",
-  "Austrian",
-  "Hungarian",
-  "Czech",
-  "Slovak",
-  "Bulgarian",
-  "Croatian",
-  "Serbian",
-  "Ukrainian",
-  "Russian",
-  "American",
-  "Canadian",
-  "Australian",
-  "New Zealander",
-  "Chinese",
-  "Japanese",
-  "Korean",
-  "Indian",
-  "Pakistani",
-  "Bangladeshi",
-  "Other",
-].sort();
-
-// Add this constant for right to work options
-const rightToWorkOptions = [
-  {
-    value: "citizen",
-    label: "British Citizen",
-  },
-  {
-    value: "settled",
-    label: "Settled Status / Indefinite Leave to Remain",
-  },
-  {
-    value: "pre-settled",
-    label: "Pre-Settled Status",
-  },
-  {
-    value: "work-visa",
-    label: "Work Visa",
-  },
-  {
-    value: "student-visa",
-    label: "Student Visa with Work Rights",
-  },
-  {
-    value: "dependent-visa",
-    label: "Dependent Visa",
-  },
-  {
-    value: "other",
-    label: "Other Immigration Status",
-  },
-  {
-    value: "no",
-    label: "No Right to Work in UK",
-  },
-];
+// Using shared constants from @/lib/constants
 
 // Add these password validation constants
 const PASSWORD_REQUIREMENTS = [
@@ -274,7 +242,12 @@ export default function CandidateSignUp() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const steps = ["Personal Information", "Account Setup", "Review & Submit"];
+  const steps = [
+    "Personal Information",
+    "Account Setup",
+    "Review & Submit",
+    "Success",
+  ];
 
   const [addressQuery, setAddressQuery] = useState("");
   const [addressSuggestions, setAddressSuggestions] = useState<AddressResult[]>(
@@ -447,22 +420,37 @@ export default function CandidateSignUp() {
         await new Promise((resolve) => setTimeout(resolve, 3000));
 
         // Create candidate profile
-        await createProfiles(supabase, {
-          userId: authData.user.id,
-          fullName: formData.fullName,
-          email: formData.email.toLowerCase(),
-          phoneNumber: formData.phoneNumber,
-          address: formData.address,
-          dateOfBirth: formData.dateOfBirth || null,
-          gender: formData.gender || null,
-          nationality: formData.nationality,
-          rightToWork: formData.rightToWork,
-        });
+        try {
+          await createProfiles(supabase, {
+            userId: authData.user.id,
+            fullName: formData.fullName,
+            email: formData.email.toLowerCase(),
+            phoneNumber: formData.phoneNumber,
+            address: formData.address,
+            dateOfBirth: formData.dateOfBirth || null,
+            gender: formData.gender || null,
+            nationality: formData.nationality,
+            rightToWork: formData.rightToWork,
+          });
 
-        toast.success(
-          "Registration successful! Please check your email to verify your account."
-        );
-        router.push("/signin");
+          toast.success(
+            "Registration successful! Please check your email to verify your account."
+          );
+
+          // Move to success step
+          setCurrentStep(4);
+        } catch (profileError) {
+          console.error("Profile creation error:", profileError);
+
+          // Even if profile creation fails, the auth user was created
+          // Show a warning but still move to success step
+          toast.error(
+            "Account created but profile setup failed. You can complete your profile after signing in."
+          );
+
+          // Move to success step
+          setCurrentStep(4);
+        }
       } catch (error: unknown) {
         console.error("Registration error:", error);
         setAuthError(
@@ -747,10 +735,17 @@ export default function CandidateSignUp() {
                 className={inputClassName}
               >
                 <option value="">Select gender (optional)</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
+                {GENDER_OPTIONS.map((gender) => (
+                  <option key={gender} value={gender}>
+                    {gender === "male"
+                      ? "Male"
+                      : gender === "female"
+                      ? "Female"
+                      : gender === "other"
+                      ? "Other"
+                      : "Prefer not to say"}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -772,7 +767,7 @@ export default function CandidateSignUp() {
                 <option value="" className="text-gray-500">
                   Select your nationality
                 </option>
-                {nationalities.map((nationality) => (
+                {NATIONALITIES.map((nationality) => (
                   <option
                     key={nationality}
                     value={nationality}
@@ -811,7 +806,7 @@ export default function CandidateSignUp() {
                   <option value="" className="text-gray-500">
                     Select your right to work status
                   </option>
-                  {rightToWorkOptions.map((option) => (
+                  {RIGHT_TO_WORK_OPTIONS.map((option) => (
                     <option
                       key={option.value}
                       value={option.value}
@@ -1150,7 +1145,7 @@ export default function CandidateSignUp() {
                       Status
                     </dt>
                     <dd className="mt-1 text-sm text-gray-900 dark:text-white">
-                      {rightToWorkOptions.find(
+                      {RIGHT_TO_WORK_OPTIONS.find(
                         (option) => option.value === formData.rightToWork.status
                       )?.label || formData.rightToWork.status}
                     </dd>
@@ -1257,6 +1252,80 @@ export default function CandidateSignUp() {
           </div>
         );
 
+      case 4:
+        return (
+          <div className="text-center space-y-6">
+            <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-green-600 dark:text-green-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Registration Successful!
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Your account has been created successfully. Please check your
+                email to verify your account before signing in.
+              </p>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <div className="flex items-start">
+                <svg
+                  className="w-5 h-5 text-blue-400 mt-0.5 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                  />
+                </svg>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
+                    Next Steps:
+                  </p>
+                  <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
+                    <li>• Check your email for a verification link</li>
+                    <li>
+                      • Click the verification link to activate your account
+                    </li>
+                    <li>• Sign in with your email and password</li>
+                    <li>• Complete your profile to start applying for jobs</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={() => router.push("/signin")}
+                className="btn-primary"
+              >
+                Go to Sign In
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="btn-secondary"
+              >
+                Register Another Account
+              </button>
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -1337,53 +1406,55 @@ export default function CandidateSignUp() {
               >
                 Previous
               </button>
-              <button
-                onClick={handleNextStep}
-                disabled={
-                  isLoading ||
-                  (currentStep === 1 && !isStepOneComplete()) ||
-                  (currentStep === 2 && !isStepTwoComplete()) ||
-                  (currentStep === 3 && !isStepThreeComplete())
-                }
-                className={`px-6 py-2.5 rounded-full bg-[#00A3FF] text-white hover:bg-[#0082CC] transition-colors ${
-                  isLoading ||
-                  (currentStep === 1 && !isStepOneComplete()) ||
-                  (currentStep === 2 && !isStepTwoComplete()) ||
-                  (currentStep === 3 && !isStepThreeComplete())
-                    ? "opacity-50 cursor-not-allowed"
-                    : ""
-                }`}
-              >
-                {isLoading ? (
-                  <div className="flex items-center">
-                    <svg
-                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Processing...
-                  </div>
-                ) : currentStep === steps.length ? (
-                  "Confirm"
-                ) : (
-                  "Next"
-                )}
-              </button>
+              {currentStep < 4 ? (
+                <button
+                  onClick={handleNextStep}
+                  disabled={
+                    isLoading ||
+                    (currentStep === 1 && !isStepOneComplete()) ||
+                    (currentStep === 2 && !isStepTwoComplete()) ||
+                    (currentStep === 3 && !isStepThreeComplete())
+                  }
+                  className={`px-6 py-2.5 rounded-full bg-[#00A3FF] text-white hover:bg-[#0082CC] transition-colors ${
+                    isLoading ||
+                    (currentStep === 1 && !isStepOneComplete()) ||
+                    (currentStep === 2 && !isStepTwoComplete()) ||
+                    (currentStep === 3 && !isStepThreeComplete())
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center">
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Processing...
+                    </div>
+                  ) : currentStep === 3 ? (
+                    "Confirm"
+                  ) : (
+                    "Next"
+                  )}
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

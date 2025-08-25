@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { useParams, useRouter } from "next/navigation";
-import { format } from "date-fns";
-import { toast } from "react-hot-toast";
-import Link from "next/link";
-import JobDetailsEditForm from "@/components/jobs/JobDetailsEditForm";
-import RecruitmentProcessEditForm from "@/components/jobs/RecruitmentProcessEditForm";
+
 import CompensationEditForm from "@/components/jobs/CompensationEditForm";
-import PerksEditForm from "@/components/jobs/PerksEditForm";
+import JobDetailsEditForm from "@/components/jobs/JobDetailsEditForm";
 import LegalEditForm from "@/components/jobs/LegalEditForm";
+import Link from "next/link";
+import PerksEditForm from "@/components/jobs/PerksEditForm";
+import RecruitmentProcessEditForm from "@/components/jobs/RecruitmentProcessEditForm";
+import { format } from "date-fns";
+import { supabase } from "@/lib/supabase";
+import { toast } from "react-hot-toast";
 
 interface JobPosting {
   id: string;
@@ -200,7 +201,7 @@ export default function JobDetailsPage() {
             {job.job_details.roleType} • {job.job_details.location}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <select
             value={job.status}
             onChange={(e) => handleStatusChange(e.target.value)}
@@ -212,7 +213,7 @@ export default function JobDetailsPage() {
           </select>
           <button
             onClick={() => setEditing("job_details")}
-            className="btn-primary"
+            className="btn-primary whitespace-nowrap"
           >
             Edit Job
           </button>

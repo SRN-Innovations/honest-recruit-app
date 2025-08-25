@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION create_candidate_profiles(
   p_date_of_birth DATE,
   p_gender TEXT,
   p_nationality TEXT,
-  p_right_to_work BOOLEAN
+  p_right_to_work JSONB
 ) RETURNS VOID AS $$
 BEGIN
   -- Verify the auth user exists

@@ -1,22 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { JobPosting } from "@/app/employer/jobs/post/page";
+import { useState } from "react";
 
 interface Props {
   data: JobPosting["compensation"];
   onChange: (data: JobPosting["compensation"]) => void;
   errors?: string[];
 }
-
-const defaultBenefits = [
-  "Health Insurance",
-  "Dental Insurance",
-  "Vision Insurance",
-  "401k",
-  "Life Insurance",
-  "Paid Time Off",
-];
 
 export default function CompensationForm({ data, onChange, errors }: Props) {
   const [newBenefit, setNewBenefit] = useState("");
