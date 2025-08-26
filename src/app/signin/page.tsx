@@ -70,7 +70,15 @@ export default function SignIn() {
     switch (currentPage) {
       case 1:
         return (
-          <div className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (email) {
+                setCurrentPage(2);
+              }
+            }}
+            className="space-y-4"
+          >
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
               Welcome Back!
             </h2>
@@ -89,6 +97,13 @@ export default function SignIn() {
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && email) {
+                    e.preventDefault();
+                    setCurrentPage(2);
+                  }
+                }}
+                autoFocus
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
                   focus:ring-2 focus:ring-[#00A3FF] focus:border-transparent
                   bg-white dark:bg-gray-700 
@@ -99,7 +114,7 @@ export default function SignIn() {
               />
             </div>
             <button
-              onClick={() => setCurrentPage(2)}
+              type="submit"
               disabled={!email}
               className={`w-full py-2.5 bg-[#00A3FF] text-white rounded-lg hover:bg-[#0082CC] transition-colors ${
                 !email ? "opacity-50 cursor-not-allowed" : ""
@@ -107,13 +122,14 @@ export default function SignIn() {
             >
               Continue
             </button>
-          </div>
+          </form>
         );
 
       case 2:
         return (
-          <div className="space-y-4">
+          <form onSubmit={handleSignIn} className="space-y-4">
             <button
+              type="button"
               onClick={() => setCurrentPage(1)}
               className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4"
             >
@@ -137,6 +153,13 @@ export default function SignIn() {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && password && !isLoading) {
+                    e.preventDefault();
+                    handleSignIn(e);
+                  }
+                }}
+                autoFocus
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
                   focus:ring-2 focus:ring-[#00A3FF] focus:border-transparent
                   bg-white dark:bg-gray-700 
@@ -160,7 +183,7 @@ export default function SignIn() {
               </div>
             </div>
             <button
-              onClick={handleSignIn}
+              type="submit"
               disabled={!password || isLoading}
               className={`w-full py-2.5 bg-[#00A3FF] text-white rounded-lg hover:bg-[#0082CC] transition-colors ${
                 !password || isLoading ? "opacity-50 cursor-not-allowed" : ""
@@ -194,7 +217,7 @@ export default function SignIn() {
                 "Sign In"
               )}
             </button>
-          </div>
+          </form>
         );
     }
   };
