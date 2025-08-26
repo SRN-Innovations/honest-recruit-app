@@ -298,7 +298,7 @@ function CandidateSearch() {
                 onClick={() => setRoleTypesOpen(!roleTypesOpen)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-left flex justify-between items-center"
               >
-                <span>
+                <span className="text-gray-900 dark:text-white">
                   {filters.roleTypes.length > 0
                     ? `${filters.roleTypes.length} selected`
                     : "Select role types"}
@@ -320,11 +320,11 @@ function CandidateSearch() {
                 </svg>
               </button>
               {roleTypesOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto ring-1 ring-black ring-opacity-5">
                   {roleTypes.map((role) => (
                     <label
                       key={role.id}
-                      className="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+                      className="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -344,9 +344,11 @@ function CandidateSearch() {
                             }));
                           }
                         }}
-                        className="mr-2"
+                        className="mr-2 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                      <span className="text-sm">{role.name}</span>
+                      <span className="text-sm text-gray-900 dark:text-white">
+                        {role.name}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -365,7 +367,7 @@ function CandidateSearch() {
                 onClick={() => setSkillsOpen(!skillsOpen)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-left flex justify-between items-center"
               >
-                <span>
+                <span className="text-gray-900 dark:text-white">
                   {filters.skills.length > 0
                     ? `${filters.skills.length} selected`
                     : "Select skills"}
@@ -387,11 +389,11 @@ function CandidateSearch() {
                 </svg>
               </button>
               {skillsOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto ring-1 ring-black ring-opacity-5">
                   {availableSkills.map((skill) => (
                     <label
                       key={skill}
-                      className="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+                      className="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -409,9 +411,11 @@ function CandidateSearch() {
                             }));
                           }
                         }}
-                        className="mr-2"
+                        className="mr-2 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                      <span className="text-sm">{skill}</span>
+                      <span className="text-sm text-gray-900 dark:text-white">
+                        {skill}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -431,7 +435,7 @@ function CandidateSearch() {
                 setFilters((prev) => ({ ...prev, location: e.target.value }))
               }
               placeholder="City, State, or Country"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
 
@@ -446,7 +450,7 @@ function CandidateSearch() {
                 onClick={() => setEmploymentTypesOpen(!employmentTypesOpen)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-left flex justify-between items-center"
               >
-                <span>
+                <span className="text-gray-900 dark:text-white">
                   {filters.employmentTypes.length > 0
                     ? `${filters.employmentTypes.length} selected`
                     : "Select employment types"}
@@ -468,11 +472,11 @@ function CandidateSearch() {
                 </svg>
               </button>
               {employmentTypesOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto ring-1 ring-black ring-opacity-5">
                   {EMPLOYMENT_TYPES.map((type) => (
                     <label
                       key={type}
-                      className="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+                      className="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -492,9 +496,11 @@ function CandidateSearch() {
                             }));
                           }
                         }}
-                        className="mr-2"
+                        className="mr-2 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                      <span className="text-sm">{type}</span>
+                      <span className="text-sm text-gray-900 dark:text-white">
+                        {type}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -513,7 +519,7 @@ function CandidateSearch() {
                 onClick={() => setWorkingHoursOpen(!workingHoursOpen)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-left flex justify-between items-center"
               >
-                <span>
+                <span className="text-gray-900 dark:text-white">
                   {filters.workingHours.length > 0
                     ? `${filters.workingHours.length} selected`
                     : "Select working hours"}
@@ -535,11 +541,11 @@ function CandidateSearch() {
                 </svg>
               </button>
               {workingHoursOpen && (
-                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto ring-1 ring-black ring-opacity-5">
                   {WORKING_HOURS.map((hours) => (
                     <label
                       key={hours}
-                      className="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+                      className="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer transition-colors"
                     >
                       <input
                         type="checkbox"
@@ -559,9 +565,11 @@ function CandidateSearch() {
                             }));
                           }
                         }}
-                        className="mr-2"
+                        className="mr-2 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                      <span className="text-sm">{hours}</span>
+                      <span className="text-sm text-gray-900 dark:text-white">
+                        {hours}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -581,7 +589,7 @@ function CandidateSearch() {
                 setFilters((prev) => ({ ...prev, keywords: e.target.value }))
               }
               placeholder="Search in summary, experience, etc."
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
         </div>
@@ -602,7 +610,7 @@ function CandidateSearch() {
                 }))
               }
               placeholder="0"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
           <div>
@@ -619,7 +627,7 @@ function CandidateSearch() {
                 }))
               }
               placeholder="0"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
         </div>
