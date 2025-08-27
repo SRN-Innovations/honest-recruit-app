@@ -7,7 +7,27 @@
 - build out the payment methods flow
 - build out the payment methods flow
 
+1. Subscription Management UI
+Cancel/reactivate subscriptions
+View subscription status
+See job posting limits
+2. Job Posting Restrictions
+Enforce job limits based on subscription
+Show subscription status on job posting form
+3. Employer Dashboard Integration
+Display current subscription
+Show remaining job slots
+Upgrade/downgrade options
+4. Admin Panel
+View all subscriptions
+Manage subscription statuses
+Monitor usage
+
+Automated reset: Set up a cron job to call the reset endpoint monthly
+
 add a messaging service within the app for employers and candidates to communicate directly through the app
+
+
 
 Here’s a clean, practical status model and when each changes:
 Pending: Candidate just applied. Created on “Apply Now”.

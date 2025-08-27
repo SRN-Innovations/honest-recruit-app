@@ -10,6 +10,7 @@ import RecruitmentProcessForm from "@/components/jobs/RecruitmentProcessForm";
 import { supabase } from "@/lib/supabase";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { useJobPosting } from "@/lib/use-job-posting";
 
 export interface JobPosting {
   jobDetails: {
@@ -101,7 +102,10 @@ export default function PostJob() {
       optionalSkills: [],
       startRequired: "",
       employmentType: "",
-      salary: { type: "exact" },
+      salary: {
+        type: "exact",
+        exact: 0,
+      },
       location: "",
       workingHours: "",
       equipment: [],
@@ -147,6 +151,14 @@ export default function PostJob() {
 
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const formRef = useRef<HTMLDivElement>(null);
+
+  // Add job posting tracking
+  const {
+    trackJobPosting,
+    canPostJob,
+    remainingJobs,
+    error: jobPostingError,
+  } = useJobPosting();
 
   const validateStep = (step: number) => {
     const newErrors: Record<string, string[]> = {};
@@ -233,6 +245,15 @@ export default function PostJob() {
       toast.error("Please fix all errors before submitting");
       return;
     }
+
+    // Check if user can post more jobs
+    if (!canPostJob) {
+      toast.error(
+        `Job limit reached. You have ${remainingJobs} jobs remaining.`
+      );
+      return;
+    }
+
     try {
       // Get the current user
       const {
@@ -242,32 +263,36 @@ export default function PostJob() {
       if (userError) throw userError;
 
       // Insert the job posting
-      const { error } = await supabase.from("job_postings").insert([
-        {
-          employer_id: user?.id,
-          job_details: jobPosting.jobDetails,
-          recruitment_process: jobPosting.recruitmentProcess,
-          compensation: jobPosting.compensation,
-          perks: jobPosting.perks,
-          legal: jobPosting.legal,
-          active_until: jobPosting.activeUntil,
-          status: "active",
-        },
-      ]);
+      const { data: jobData, error } = await supabase
+        .from("job_postings")
+        .insert([
+          {
+            employer_id: user?.id,
+            job_details: jobPosting.jobDetails,
+            recruitment_process: jobPosting.recruitmentProcess,
+            compensation: jobPosting.compensation,
+            perks: jobPosting.perks,
+            legal: jobPosting.legal,
+            active_until: jobPosting.activeUntil,
+            status: "active",
+          },
+        ])
+        .select()
+        .single();
 
       if (error) throw error;
 
+      // Track the job posting with subscription system
+      if (jobData?.id) {
+        const trackingSuccess = await trackJobPosting(jobData.id);
+        if (!trackingSuccess) {
+          console.warn("Failed to track job posting, but job was created");
+        }
+      }
+
       // Handle file uploads if there are any attachments
       if (jobPosting.attachments.length > 0) {
-        const jobId = (
-          await supabase
-            .from("job_postings")
-            .select("id")
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single()
-        ).data?.id;
-
+        const jobId = jobData?.id;
         if (jobId) {
           for (const file of jobPosting.attachments) {
             const { error: uploadError } = await supabase.storage
@@ -352,6 +377,52 @@ export default function PostJob() {
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
         Post a New Job
       </h1>
+
+      {/* Subscription Status Banner */}
+      <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              <svg
+                className="w-5 h-5 text-blue-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Subscription Status
+              </h3>
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                {canPostJob
+                  ? `You can post ${
+                      remainingJobs === -1 ? "unlimited" : remainingJobs
+                    } more job${remainingJobs === 1 ? "" : "s"}`
+                  : `Job limit reached. You have ${remainingJobs} jobs remaining.`}
+              </p>
+            </div>
+          </div>
+          {!canPostJob && (
+            <a
+              href="/pricing"
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 transition-colors"
+            >
+              Upgrade Plan
+            </a>
+          )}
+        </div>
+        {jobPostingError && (
+          <div className="mt-3 text-sm text-red-600 dark:text-red-400">
+            {jobPostingError}
+          </div>
+        )}
+      </div>
 
       <div
         ref={formRef}

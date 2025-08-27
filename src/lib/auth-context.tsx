@@ -17,6 +17,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   userType: UserType;
   isLoading: boolean;
+  currentUserId: string | null;
   signOut: () => Promise<void>;
   redirectToDashboard: () => void;
 }
@@ -251,6 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoggedIn,
         userType,
         isLoading,
+        currentUserId,
         signOut,
         redirectToDashboard,
       }}

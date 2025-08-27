@@ -2,8 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 import ThemeToggle from "../ThemeToggle";
 import { useAuth } from "@/lib/auth-context";
+import { useSubscription } from "@/lib/use-subscription";
+import SubscriptionDropdown from "../subscription/SubscriptionDropdown";
 
 interface MainHeaderProps {
   showSignIn?: boolean;
@@ -21,12 +24,23 @@ export default function MainHeader({
   showSignOut = false,
 }: MainHeaderProps) {
   const { isLoggedIn, userType, signOut, redirectToDashboard } = useAuth();
+  const { hasSubscription, isLoading } = useSubscription();
+  const [subscriptionDropdownOpen, setSubscriptionDropdownOpen] =
+    useState(false);
 
   const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (isLoggedIn && userType) {
       e.preventDefault();
       redirectToDashboard();
     }
+  };
+
+  const handleSubscriptionToggle = () => {
+    setSubscriptionDropdownOpen(!subscriptionDropdownOpen);
+  };
+
+  const handleSubscriptionClose = () => {
+    setSubscriptionDropdownOpen(false);
   };
 
   return (
@@ -101,6 +115,28 @@ export default function MainHeader({
               </>
             ) : (
               <>
+                {/* Subscription Management - Only show for employers */}
+                {userType === "employer" && (
+                  <>
+                    {!isLoading && !hasSubscription && (
+                      <Link
+                        href="/pricing"
+                        className="btn-primary bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      >
+                        Subscribe Now
+                      </Link>
+                    )}
+
+                    {!isLoading && hasSubscription && (
+                      <SubscriptionDropdown
+                        isOpen={subscriptionDropdownOpen}
+                        onToggle={handleSubscriptionToggle}
+                        onClose={handleSubscriptionClose}
+                      />
+                    )}
+                  </>
+                )}
+
                 {/* Home icon -> dashboard */}
                 <button
                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
@@ -122,6 +158,7 @@ export default function MainHeader({
                     />
                   </svg>
                 </button>
+
                 {/* Profile icon -> profile page by user type */}
                 <Link
                   href={
